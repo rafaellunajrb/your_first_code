@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Speech-Controlled Scroll App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-start {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-stop {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-stop:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6c757d;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.listening {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .recognition-display {
+            padding: 20px 30px;
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            min-height: 60px;
+            font-style: italic;
+            color: #333;
+        }
+
+        .recognition-display.active {
+            background: #c8e6c9;
+            border-left-color: #4caf50;
+        }
+
+        .content {
+            padding: 40px;
+            max-height: 600px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .content h2 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .content h2:first-child {
+            margin-top: 0;
+        }
+
+        .content p {
+            margin-bottom: 20px;
+            text-align: justify;
+            color: #333;
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            right: 30px;
+            bottom: 30px;
+            background: #667eea;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            display: none;
+        }
+
+        .scroll-indicator.active {
+            display: block;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(120%);
+            }
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .settings {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .setting-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .setting-group input[type="range"] {
+            width: 150px;
+        }
+
+        .setting-group input[type="number"] {
+            width: 80px;
+            padding: 5px 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Speech-Controlled Scroll</h1>
+            <p>Read out loud and watch the page scroll automatically</p>
+        </div>
+
+        <div class="controls">
+            <div>
+                <button id="startBtn" class="btn btn-start">Start Reading</button>
+                <button id="stopBtn" class="btn btn-stop" disabled>Stop</button>
+            </div>
+            <div class="status">
+                <div id="statusIndicator" class="status-indicator"></div>
+                <span id="statusText">Ready</span>
+            </div>
+        </div>
+
+        <div id="recognitionDisplay" class="recognition-display">
+            Your speech will appear here...
+        </div>
+
+        <div class="settings">
+            <div class="setting-group">
+                <label for="scrollSpeed">Scroll Speed:</label>
+                <input type="range" id="scrollSpeed" min="10" max="100" value="50">
+                <span id="speedValue">50</span>
+            </div>
+            <div class="setting-group">
+                <label for="sensitivity">Sensitivity:</label>
+                <input type="range" id="sensitivity" min="1" max="10" value="5">
+                <span id="sensitivityValue">5</span>
+            </div>
+        </div>
+
+        <div class="content" id="content">
+            <h2>The Art of Reading</h2>
+            <p>
+                Reading is one of humanity's most fundamental skills, a gateway to knowledge, imagination, and understanding.
+                When we read, we embark on a journey through the minds of others, experiencing worlds both real and imagined.
+                Each word we encounter is a stepping stone, leading us deeper into realms of thought and emotion.
+            </p>
+            <p>
+                The act of reading aloud adds another dimension to this experience. It transforms silent symbols on a page
+                into living sound, engaging not just our eyes and minds, but our voices and ears as well. As you read these
+                words aloud, you're participating in an ancient tradition that connects you to countless generations of
+                storytellers, teachers, and learners.
+            </p>
+
+            <h2>The Power of Speech Recognition</h2>
+            <p>
+                Modern technology has given us remarkable tools that can understand human speech. What once seemed like
+                science fiction is now an everyday reality. Speech recognition systems can transcribe our words, execute
+                commands, and even help us navigate through content more naturally than ever before.
+            </p>
+            <p>
+                This application combines the timeless act of reading aloud with cutting-edge technology. As you speak,
+                the page automatically scrolls, keeping pace with your reading. It's designed to make the reading experience
+                more fluid and natural, eliminating the need to manually scroll while you're focused on the text.
+            </p>
+
+            <h2>How It Works</h2>
+            <p>
+                The technology behind this application uses the Web Speech API, a powerful interface that allows web browsers
+                to recognize and transcribe human speech. When you click "Start Reading" and grant microphone permission,
+                the browser begins listening to your voice.
+            </p>
+            <p>
+                As you read the text aloud, the speech recognition engine processes your words in real-time. Each time it
+                recognizes speech, it triggers a scroll action, moving the page downward smoothly. The scroll speed can be
+                adjusted to match your reading pace, ensuring a comfortable and personalized experience.
+            </p>
+
+            <h2>Benefits of Reading Aloud</h2>
+            <p>
+                Reading aloud has numerous cognitive benefits. It improves comprehension, as the act of speaking forces us
+                to slow down and process each word more deliberately. It enhances memory retention, creating multiple neural
+                pathways for the information we're consuming. For language learners, it's an invaluable tool for improving
+                pronunciation and fluency.
+            </p>
+            <p>
+                Studies have shown that reading aloud activates different parts of the brain compared to silent reading.
+                The motor cortex engages as we form words, the auditory cortex processes the sounds we make, and the visual
+                cortex continues to interpret the written symbols. This multi-sensory engagement creates a richer, more
+                memorable learning experience.
+            </p>
+
+            <h2>Tips for Best Results</h2>
+            <p>
+                To get the most out of this application, speak clearly and at a natural pace. There's no need to rush or
+                speak unnaturally slowly. Find a rhythm that feels comfortable for you. If the page scrolls too quickly or
+                slowly, adjust the scroll speed setting to match your reading pace.
+            </p>
+            <p>
+                Make sure you're in a relatively quiet environment for best results. While modern speech recognition is
+                quite robust, background noise can interfere with accuracy. Position your microphone appropriately, whether
+                it's built into your device or an external one. Most importantly, enjoy the experience of reading in this
+                new, interactive way.
+            </p>
+
+            <h2>The Future of Interactive Reading</h2>
+            <p>
+                As technology continues to evolve, we can expect even more innovative ways to interact with written content.
+                Imagine systems that not only scroll but also highlight the text you're reading, provide instant definitions
+                for unfamiliar words, or even adjust the reading material's complexity based on your comprehension.
+            </p>
+            <p>
+                The convergence of artificial intelligence, speech recognition, and natural language processing is opening
+                up exciting possibilities. In the future, reading might become an even more personalized and adaptive
+                experience, tailored to each individual's needs, preferences, and learning style.
+            </p>
+
+            <h2>Conclusion</h2>
+            <p>
+                This speech-controlled scrolling application is just one example of how technology can enhance traditional
+                activities. By combining the timeless practice of reading aloud with modern speech recognition, we create
+                a more engaging and hands-free experience. Whether you're a student, a professional, or simply someone who
+                loves to read, this tool offers a new way to interact with text.
+            </p>
+            <p>
+                So go ahead, click that "Start Reading" button, and experience reading in a whole new way. Let your voice
+                guide your journey through these words, and discover how natural and intuitive this technology can feel.
+                Happy reading, and may your scrolling always be smooth!
+            </p>
+        </div>
+    </div>
+
+    <div id="scrollIndicator" class="scroll-indicator">Scrolling...</div>
+
+    <script>
+        // Check for browser support
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert('Speech recognition is not supported in this browser. Please use Google Chrome.');
+        }
+
+        // Initialize speech recognition
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        // Get DOM elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const recognitionDisplay = document.getElementById('recognitionDisplay');
+        const content = document.getElementById('content');
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        const scrollSpeedInput = document.getElementById('scrollSpeed');
+        const speedValue = document.getElementById('speedValue');
+        const sensitivityInput = document.getElementById('sensitivity');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+
+        // State variables
+        let isListening = false;
+        let scrollSpeed = 50;
+        let sensitivity = 5;
+        let lastSpeechTime = 0;
+        let scrollInterval = null;
+        let currentTranscript = '';
+
+        // Update settings displays
+        scrollSpeedInput.addEventListener('input', (e) => {
+            scrollSpeed = e.target.value;
+            speedValue.textContent = scrollSpeed;
+        });
+
+        sensitivityInput.addEventListener('input', (e) => {
+            sensitivity = e.target.value;
+            sensitivityValue.textContent = sensitivity;
+        });
+
+        // Start listening
+        startBtn.addEventListener('click', () => {
+            try {
+                recognition.start();
+                isListening = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusIndicator.classList.add('listening');
+                statusText.textContent = 'Listening...';
+                recognitionDisplay.classList.add('active');
+            } catch (error) {
+                console.error('Error starting speech recognition:', error);
+                alert('Could not start speech recognition. Please check microphone permissions.');
+            }
+        });
+
+        // Stop listening
+        stopBtn.addEventListener('click', () => {
+            recognition.stop();
+            isListening = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            statusIndicator.classList.remove('listening');
+            statusText.textContent = 'Stopped';
+            recognitionDisplay.classList.remove('active');
+            stopScrolling();
+        });
+
+        // Handle speech recognition results
+        recognition.addEventListener('result', (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript + ' ';
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+
+            // Update display
+            if (finalTranscript) {
+                currentTranscript += finalTranscript;
+                recognitionDisplay.textContent = currentTranscript;
+
+                // Keep only last 200 characters for display
+                if (currentTranscript.length > 200) {
+                    currentTranscript = '...' + currentTranscript.slice(-200);
+                }
+            } else if (interimTranscript) {
+                recognitionDisplay.textContent = currentTranscript + interimTranscript;
+            }
+
+            // Trigger scrolling when speech is detected
+            if (finalTranscript || interimTranscript) {
+                lastSpeechTime = Date.now();
+                startScrolling();
+            }
+        });
+
+        // Handle errors
+        recognition.addEventListener('error', (event) => {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'no-speech') {
+                console.log('No speech detected');
+            } else if (event.error === 'not-allowed') {
+                alert('Microphone access was denied. Please grant permission and try again.');
+                stopBtn.click();
+            }
+        });
+
+        // Handle recognition end
+        recognition.addEventListener('end', () => {
+            if (isListening) {
+                // Restart if it was stopped unexpectedly
+                try {
+                    recognition.start();
+                } catch (error) {
+                    console.log('Recognition ended');
+                }
+            }
+        });
+
+        // Scrolling functions
+        function startScrolling() {
+            scrollIndicator.classList.add('active');
+
+            if (!scrollInterval) {
+                scrollInterval = setInterval(() => {
+                    const timeSinceLastSpeech = Date.now() - lastSpeechTime;
+
+                    // Stop scrolling if no speech detected for 2 seconds
+                    if (timeSinceLastSpeech > 2000) {
+                        stopScrolling();
+                        return;
+                    }
+
+                    // Calculate scroll amount based on speed and sensitivity
+                    const scrollAmount = (scrollSpeed / 10) * (sensitivity / 5);
+                    content.scrollTop += scrollAmount;
+
+                    // Check if reached bottom
+                    if (content.scrollTop >= content.scrollHeight - content.clientHeight) {
+                        stopScrolling();
+                    }
+                }, 100);
+            }
+        }
+
+        function stopScrolling() {
+            scrollIndicator.classList.remove('active');
+            if (scrollInterval) {
+                clearInterval(scrollInterval);
+                scrollInterval = null;
+            }
+        }
+
+        // Prevent page from scrolling when content scrolls
+        content.addEventListener('wheel', (e) => {
+            e.stopPropagation();
+        }, { passive: true });
+    </script>
+</body>
+</html>
