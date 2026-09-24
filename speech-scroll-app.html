@@ -207,6 +207,16 @@
   }
   #heard span { direction: ltr; unicode-bidi: isolate; }
   #heard .interim { font-style: italic; opacity: 0.7; }
+  .btn.back {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    height: 40px;
+    box-shadow: var(--shadow);
+    z-index: 16;
+  }
+  .btn.back svg { transition: transform 0.2s ease; }
+  .btn.back.up svg { transform: rotate(180deg); }
   #banner {
     position: fixed;
     top: 72px;
@@ -328,6 +338,7 @@
     .toolbar { gap: 6px; }
     .btn .label { display: none; }
     .btn.primary .label { display: inline; }
+    .btn.back { bottom: 68px; } /* clear of the "heard" strip */
     .btn { padding: 0 9px; }
     .status .status-text { display: none; }
     .field { grid-template-columns: 1fr 48px; }
@@ -373,6 +384,10 @@
   <div id="text"></div>
 </main>
 
+<button id="backBtn" class="btn primary back" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  <span class="label">Back to my place</span>
+</button>
 <div id="heard" hidden></div>
 <div id="banner" role="alert" hidden><p id="bannerText"></p><button id="bannerClose" aria-label="Dismiss">&times;</button></div>
 
@@ -473,6 +488,8 @@
   const STORE_KEY = 'speechScroll.v2';
   const LOOKAHEAD = 20;         // how many words ahead to look for the next spoken word
   const RELOCATE_RANGE = 400;   // how far ahead to search when the reader seems lost
+  const REREAD_RANGE = 200;     // how far back to search when the reader goes back to re-read
+  const FOLLOW_PAUSE = 3000;    // ms to leave the page alone after the reader scrolls by hand
   const DEFAULTS = { fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true };
 
   const SAMPLE = `# Welcome to Speech Scroll
@@ -481,7 +498,7 @@ Press the Start button, allow microphone access, and read this text out loud. Th
 
 Speak at your normal pace. The app listens for the words on the page, so it keeps up when you read faster and waits when you stop. If you cough, pause, or say something that isn't in the text, it holds its place until you carry on.
 
-You can skip a few words or even a sentence, and it will find you again after you read a short phrase. If it ever loses track, click any word to move the highlight there, or use the arrow keys to nudge it.
+You can skip a few words or even a sentence, or go back and read a sentence again, and it will find you after you read a short phrase. If it ever loses track, click any word to move the highlight there, or use the arrow keys to nudge it.
 
 # Your own text
 
@@ -539,6 +556,7 @@ Happy reading!`;
   const editDlg = $('editDlg');
   const editor = $('editor');
   const settingsDlg = $('settingsDlg');
+  const backBtn = $('backBtn');
 
   const MIC_ICON = micIcon.innerHTML;
   const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
@@ -682,7 +700,9 @@ Happy reading!`;
       recent = [];
       misses = 0;
     }
-    scrollToCurrent(false);
+    // After a hand scroll, give the reader a moment to look around before following again.
+    if (manual || Date.now() - lastManualScroll > FOLLOW_PAUSE) scrollToCurrent(false);
+    else checkPlaceVisible();
     updateProgress();
     saveSoon();
 
@@ -742,17 +762,36 @@ Happy reading!`;
     }
   }
 
-  // The reader may have jumped further ahead: look for the last three spoken words as a phrase.
+  const phraseAt = (s, phrase) => phrase.every((w, t) => words[s + t] && similar(words[s + t].n, w));
+
+  // The reader may have skipped ahead or gone back to re-read. Look for the last few
+  // spoken words as a phrase: three words to jump ahead, four (nearest first) to jump back.
   function relocate() {
-    if (recent.length < 3) return;
-    const phrase = recent.slice(-3);
-    if (phrase.join('').length < 9) return; // too generic ("and it is") to trust
-    const end = Math.min(words.length - 2, pos + RELOCATE_RANGE);
-    for (let s = pos; s < end; s++) {
-      if (similar(words[s].n, phrase[0]) && similar(words[s + 1].n, phrase[1]) && similar(words[s + 2].n, phrase[2])) {
-        misses = 0;
-        setPos(s + 3);
-        return;
+    if (recent.length >= 3) {
+      const phrase = recent.slice(-3);
+      if (phrase.join('').length >= 9) { // shorter phrases ("and it is") are too generic to trust
+        const end = Math.min(words.length - 2, pos + RELOCATE_RANGE);
+        for (let s = pos; s < end; s++) {
+          if (phraseAt(s, phrase)) {
+            misses = 0;
+            setPos(s + 3);
+            return;
+          }
+        }
+      }
+    }
+
+    if (recent.length >= 4) {
+      const phrase = recent.slice(-4);
+      if (phrase.join('').length < 12) return;
+      // The phrase must end at least two words before the current word, so ordinary
+      // reading (whose last words sit just behind us) never triggers a jump back.
+      for (let s = pos - 6; s >= Math.max(0, pos - REREAD_RANGE); s--) {
+        if (phraseAt(s, phrase)) {
+          misses = 0;
+          setPos(s + 4);
+          return;
+        }
       }
     }
   }
@@ -793,6 +832,7 @@ Happy reading!`;
     if (Math.abs(animTarget - animY) < 0.5) {
       reader.scrollTop = animTarget;
       animId = 0;
+      checkPlaceVisible();
       return;
     }
     reader.scrollTop = animY;
@@ -805,8 +845,40 @@ Happy reading!`;
   }
 
   // Let the reader scroll by hand without the animation fighting back.
-  reader.addEventListener('wheel', cancelScroll, { passive: true });
-  reader.addEventListener('touchstart', cancelScroll, { passive: true });
+  let lastManualScroll = 0;
+  function onManualScroll() {
+    lastManualScroll = Date.now();
+    cancelScroll();
+  }
+  reader.addEventListener('wheel', onManualScroll, { passive: true });
+  reader.addEventListener('touchmove', onManualScroll, { passive: true });
+  reader.addEventListener('mousedown', (e) => {
+    if (e.target === reader) onManualScroll(); // dragging the scrollbar
+  });
+
+  // Offer a way back when the current word has been scrolled out of view.
+  function checkPlaceVisible() {
+    if (!spans.length || animId) {
+      backBtn.hidden = true;
+      return;
+    }
+    const el = spans[Math.min(shownSpan, spans.length - 1)].el;
+    const rr = reader.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    backBtn.hidden = er.bottom > rr.top && er.top < rr.bottom;
+    backBtn.classList.toggle('up', er.bottom <= rr.top);
+  }
+  let scrollCheckFrame = 0;
+  reader.addEventListener('scroll', () => {
+    cancelAnimationFrame(scrollCheckFrame);
+    scrollCheckFrame = requestAnimationFrame(checkPlaceVisible);
+  }, { passive: true });
+
+  function backToPlace() {
+    lastManualScroll = 0;
+    backBtn.hidden = true;
+    scrollToCurrent(false);
+  }
 
   function layout() {
     const h = reader.clientHeight;
@@ -931,6 +1003,7 @@ Happy reading!`;
     if (!recActive) {
       try { rec.start(); } catch (err) { /* already starting */ }
     }
+    keepScreenAwake(true);
     updateMicButton();
   }
 
@@ -939,9 +1012,31 @@ Happy reading!`;
     if (rec) {
       try { rec.abort(); } catch (err) { /* not running */ }
     }
+    keepScreenAwake(false);
     setStatus('off');
     updateMicButton();
   }
+
+  // Nobody touches the keyboard or mouse while reading aloud, so stop the screen dimming or locking.
+  let wakeLock = null;
+  async function keepScreenAwake(on) {
+    try {
+      if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+        const lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+        wakeLock = lock;
+        if (!wantListening) keepScreenAwake(false); // stopped while the request was pending
+      } else if (!on && wakeLock) {
+        const lock = wakeLock;
+        wakeLock = null;
+        await lock.release();
+      }
+    } catch (err) { /* not supported or not allowed: the screen may dim as usual */ }
+  }
+  // Chrome drops the lock when the tab is hidden; take it again on return.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wantListening) keepScreenAwake(true);
+  });
 
   const toggleListening = () => (wantListening ? stopListening() : startListening());
 
@@ -1058,6 +1153,8 @@ Happy reading!`;
     pos = 0;
     recent = [];
     misses = 0;
+    heardLog = [];
+    heard.hidden = true;
     render();
     editDlg.close();
     layout();
@@ -1123,6 +1220,10 @@ Happy reading!`;
   }
 
   micBtn.addEventListener('click', toggleListening);
+  backBtn.addEventListener('click', () => {
+    backToPlace();
+    backBtn.blur();
+  });
   $('restartBtn').addEventListener('click', () => setPos(0, true));
   $('editBtn').addEventListener('click', openEditor);
   $('settingsBtn').addEventListener('click', () => settingsDlg.showModal());
