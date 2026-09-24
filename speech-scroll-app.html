@@ -1,521 +1,1183 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech-Controlled Scroll App</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech Scroll</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #a3a097;
+    --subtle: #6b6962;
+    --border: #e3e0d8;
+    --hover: rgba(0, 0, 0, 0.05);
+    --accent: #2f6fde;
+    --accent-text: #ffffff;
+    --danger: #c73e3e;
+    --ok: #1f9d55;
+    --hl: rgba(255, 204, 51, 0.55);
+    --line: rgba(47, 111, 222, 0.10);
+    --line-edge: rgba(47, 111, 222, 0.55);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    --fs: 40px;
+    --measure: 42ch;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121316;
+      --surface: #1b1d22;
+      --text: #ecebe7;
+      --muted: #5f626a;
+      --subtle: #9a9ca3;
+      --border: #2c2f36;
+      --hover: rgba(255, 255, 255, 0.06);
+      --accent: #6f9dff;
+      --accent-text: #0d1320;
+      --danger: #ff6b6b;
+      --ok: #4ad084;
+      --hl: rgba(255, 204, 51, 0.30);
+      --line: rgba(111, 157, 255, 0.09);
+      --line-edge: rgba(111, 157, 255, 0.6);
+      --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121316;
+    --surface: #1b1d22;
+    --text: #ecebe7;
+    --muted: #5f626a;
+    --subtle: #9a9ca3;
+    --border: #2c2f36;
+    --hover: rgba(255, 255, 255, 0.06);
+    --accent: #6f9dff;
+    --accent-text: #0d1320;
+    --danger: #ff6b6b;
+    --ok: #4ad084;
+    --hl: rgba(255, 204, 51, 0.30);
+    --line: rgba(111, 157, 255, 0.09);
+    --line-edge: rgba(111, 157, 255, 0.6);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.8;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
-        }
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+  }
+  .toolbar .spacer { flex: 1; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    font-weight: 600;
+    min-width: 104px;
+    justify-content: center;
+  }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .btn.primary.listening { background: var(--danger); color: #fff; }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--subtle);
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.listening { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+  .dot.starting { background: var(--accent); animation: pulse 0.8s ease-in-out infinite; }
+  .dot.error { background: var(--danger); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
+  .progress {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--accent);
+    z-index: 20;
+    transition: width 0.3s ease;
+  }
 
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
+  /* ---------- Reader ---------- */
+  #marker {
+    position: fixed;
+    left: 0;
+    right: 0;
+    background: var(--line);
+    border-left: 6px solid var(--line-edge);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #reader {
+    position: fixed;
+    top: 59px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    z-index: 1;
+    outline: none;
+  }
+  #text {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: var(--fs);
+    line-height: 1.5;
+    overflow-wrap: break-word;
+  }
+  #text p { margin: 0 0 0.9em; }
+  #text h2 { font-size: 1.15em; margin: 0.6em 0 0.5em; line-height: 1.3; }
+  #text .empty { color: var(--subtle); font-size: 0.6em; text-align: center; }
+  .w {
+    cursor: pointer;
+    border-radius: 0.12em;
+    transition: color 0.25s ease, background-color 0.15s ease;
+  }
+  .w:hover { text-decoration: underline dotted; text-underline-offset: 0.15em; }
+  .w.read { color: var(--muted); }
+  .w.current { background: var(--hl); box-shadow: 0 0 0 0.08em var(--hl); color: var(--text); }
 
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-        }
+  /* ---------- Heard strip & banner ---------- */
+  #heard {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    max-width: min(720px, calc(100vw - 32px));
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--subtle);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;          /* keep the newest words visible */
+    text-align: left;
+    box-shadow: var(--shadow);
+    z-index: 15;
+  }
+  #heard span { direction: ltr; unicode-bidi: isolate; }
+  #heard .interim { font-style: italic; opacity: 0.7; }
+  #banner {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(640px, calc(100vw - 32px));
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--danger);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    line-height: 1.45;
+    z-index: 25;
+  }
+  #banner.info { border-left-color: var(--accent); }
+  #banner p { margin: 0; flex: 1; }
+  #banner button {
+    border: none;
+    background: none;
+    color: var(--subtle);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  [hidden] { display: none !important; }
 
-        .controls {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+  /* ---------- Dialogs ---------- */
+  dialog {
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  .dlg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 0;
+  }
+  .dlg-head h2 { margin: 0; font-size: 18px; }
+  .dlg-body { padding: 16px 20px; }
+  .dlg-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 20px 20px;
+  }
+  .dlg-foot .spacer { flex: 1; }
+  .close-x {
+    border: none;
+    background: none;
+    color: var(--subtle);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  textarea {
+    width: 100%;
+    height: 50vh;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, sans-serif;
+  }
+  .hint { margin: 8px 0 0; font-size: 13px; color: var(--subtle); line-height: 1.45; }
+  .field {
+    display: grid;
+    grid-template-columns: 150px 1fr 56px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .field output { text-align: right; color: var(--subtle); font-variant-numeric: tabular-nums; }
+  .field select {
+    grid-column: 2 / 4;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  .field input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .field.check { grid-template-columns: auto 1fr; gap: 8px; }
+  .field.check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+  h3 { font-size: 14px; margin: 20px 0 8px; }
+  .keys { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .keys td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .keys td:first-child { width: 150px; }
+  kbd {
+    display: inline-block;
+    min-width: 22px;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg);
+    font: 12px/1.5 ui-monospace, monospace;
+    text-align: center;
+  }
 
-        .btn {
-            padding: 12px 30px;
-            font-size: 16px;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .btn-start {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-start:hover {
-            background: #218838;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-        }
-
-        .btn-stop {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-stop:hover {
-            background: #c82333;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
-        }
-
-        .btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #6c757d;
-            animation: pulse 2s infinite;
-        }
-
-        .status-indicator.listening {
-            background: #28a745;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        .recognition-display {
-            padding: 20px 30px;
-            background: #e3f2fd;
-            border-left: 4px solid #2196f3;
-            min-height: 60px;
-            font-style: italic;
-            color: #333;
-        }
-
-        .recognition-display.active {
-            background: #c8e6c9;
-            border-left-color: #4caf50;
-        }
-
-        .content {
-            padding: 40px;
-            max-height: 600px;
-            overflow-y: auto;
-            scroll-behavior: smooth;
-        }
-
-        .content h2 {
-            color: #667eea;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            font-size: 1.8em;
-        }
-
-        .content h2:first-child {
-            margin-top: 0;
-        }
-
-        .content p {
-            margin-bottom: 20px;
-            text-align: justify;
-            color: #333;
-        }
-
-        .scroll-indicator {
-            position: fixed;
-            right: 30px;
-            bottom: 30px;
-            background: #667eea;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
-            font-weight: 600;
-            display: none;
-        }
-
-        .scroll-indicator.active {
-            display: block;
-            animation: slideIn 0.3s;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(120%);
-            }
-            to {
-                transform: translateX(0);
-            }
-        }
-
-        .settings {
-            padding: 15px 30px;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .setting-group {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .setting-group label {
-            font-weight: 600;
-            color: #495057;
-        }
-
-        .setting-group input[type="range"] {
-            width: 150px;
-        }
-
-        .setting-group input[type="number"] {
-            width: 80px;
-            padding: 5px 10px;
-            border: 1px solid #ced4da;
-            border-radius: 5px;
-        }
-    </style>
+  @media (max-width: 720px) {
+    .toolbar { gap: 6px; }
+    .btn .label { display: none; }
+    .btn.primary .label { display: inline; }
+    .btn { padding: 0 9px; }
+    .status .status-text { display: none; }
+    .field { grid-template-columns: 1fr 48px; }
+    .field label { grid-column: 1 / 3; }
+    .field select { grid-column: 1 / 3; }
+    .field.check label { grid-column: auto; }
+  }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Speech-Controlled Scroll</h1>
-            <p>Read out loud and watch the page scroll automatically</p>
-        </div>
 
-        <div class="controls">
-            <div>
-                <button id="startBtn" class="btn btn-start">Start Reading</button>
-                <button id="stopBtn" class="btn btn-stop" disabled>Stop</button>
-            </div>
-            <div class="status">
-                <div id="statusIndicator" class="status-indicator"></div>
-                <span id="statusText">Ready</span>
-            </div>
-        </div>
+<header class="toolbar">
+  <button id="micBtn" class="btn primary" title="Start or pause listening (Space)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g id="micIcon"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></g></svg>
+    <span class="label" id="micLabel">Start</span>
+  </button>
+  <div class="status" aria-live="polite">
+    <span id="dot" class="dot"></span>
+    <span id="statusText" class="status-text">Not listening</span>
+  </div>
+  <div class="spacer"></div>
+  <button id="restartBtn" class="btn" title="Go back to the beginning (Home)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
+    <span class="label">Restart</span>
+  </button>
+  <button id="editBtn" class="btn" title="Paste or open your own text (E)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
+    <span class="label">Edit text</span>
+  </button>
+  <button id="settingsBtn" class="btn" title="Settings (S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+    <span class="label">Settings</span>
+  </button>
+  <button id="fullBtn" class="btn" title="Full screen (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    <span class="label">Full screen</span>
+  </button>
+</header>
+<div id="progress" class="progress"></div>
 
-        <div id="recognitionDisplay" class="recognition-display">
-            Your speech will appear here...
-        </div>
+<div id="marker"></div>
+<main id="reader" tabindex="-1">
+  <div id="text"></div>
+</main>
 
-        <div class="settings">
-            <div class="setting-group">
-                <label for="scrollSpeed">Scroll Speed:</label>
-                <input type="range" id="scrollSpeed" min="10" max="100" value="50">
-                <span id="speedValue">50</span>
-            </div>
-            <div class="setting-group">
-                <label for="sensitivity">Sensitivity:</label>
-                <input type="range" id="sensitivity" min="1" max="10" value="5">
-                <span id="sensitivityValue">5</span>
-            </div>
-        </div>
+<div id="heard" hidden></div>
+<div id="banner" role="alert" hidden><p id="bannerText"></p><button id="bannerClose" aria-label="Dismiss">&times;</button></div>
 
-        <div class="content" id="content">
-            <h2>The Art of Reading</h2>
-            <p>
-                Reading is one of humanity's most fundamental skills, a gateway to knowledge, imagination, and understanding.
-                When we read, we embark on a journey through the minds of others, experiencing worlds both real and imagined.
-                Each word we encounter is a stepping stone, leading us deeper into realms of thought and emotion.
-            </p>
-            <p>
-                The act of reading aloud adds another dimension to this experience. It transforms silent symbols on a page
-                into living sound, engaging not just our eyes and minds, but our voices and ears as well. As you read these
-                words aloud, you're participating in an ancient tradition that connects you to countless generations of
-                storytellers, teachers, and learners.
-            </p>
+<!-- Edit text -->
+<dialog id="editDlg">
+  <div class="dlg-head">
+    <h2>Your text</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <textarea id="editor" spellcheck="true" placeholder="Paste the text you want to read aloud..."></textarea>
+    <p class="hint">Leave a blank line between paragraphs. Start a line with <strong>#</strong> to make it a heading.</p>
+  </div>
+  <div class="dlg-foot">
+    <button id="openFileBtn" class="btn">Open .txt file</button>
+    <button id="sampleBtn" class="btn">Load sample</button>
+    <input id="fileInput" type="file" accept=".txt,.md,text/plain" hidden>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Cancel</button>
+    <button id="applyBtn" class="btn primary">Use this text</button>
+  </div>
+</dialog>
 
-            <h2>The Power of Speech Recognition</h2>
-            <p>
-                Modern technology has given us remarkable tools that can understand human speech. What once seemed like
-                science fiction is now an everyday reality. Speech recognition systems can transcribe our words, execute
-                commands, and even help us navigate through content more naturally than ever before.
-            </p>
-            <p>
-                This application combines the timeless act of reading aloud with cutting-edge technology. As you speak,
-                the page automatically scrolls, keeping pace with your reading. It's designed to make the reading experience
-                more fluid and natural, eliminating the need to manually scroll while you're focused on the text.
-            </p>
-
-            <h2>How It Works</h2>
-            <p>
-                The technology behind this application uses the Web Speech API, a powerful interface that allows web browsers
-                to recognize and transcribe human speech. When you click "Start Reading" and grant microphone permission,
-                the browser begins listening to your voice.
-            </p>
-            <p>
-                As you read the text aloud, the speech recognition engine processes your words in real-time. Each time it
-                recognizes speech, it triggers a scroll action, moving the page downward smoothly. The scroll speed can be
-                adjusted to match your reading pace, ensuring a comfortable and personalized experience.
-            </p>
-
-            <h2>Benefits of Reading Aloud</h2>
-            <p>
-                Reading aloud has numerous cognitive benefits. It improves comprehension, as the act of speaking forces us
-                to slow down and process each word more deliberately. It enhances memory retention, creating multiple neural
-                pathways for the information we're consuming. For language learners, it's an invaluable tool for improving
-                pronunciation and fluency.
-            </p>
-            <p>
-                Studies have shown that reading aloud activates different parts of the brain compared to silent reading.
-                The motor cortex engages as we form words, the auditory cortex processes the sounds we make, and the visual
-                cortex continues to interpret the written symbols. This multi-sensory engagement creates a richer, more
-                memorable learning experience.
-            </p>
-
-            <h2>Tips for Best Results</h2>
-            <p>
-                To get the most out of this application, speak clearly and at a natural pace. There's no need to rush or
-                speak unnaturally slowly. Find a rhythm that feels comfortable for you. If the page scrolls too quickly or
-                slowly, adjust the scroll speed setting to match your reading pace.
-            </p>
-            <p>
-                Make sure you're in a relatively quiet environment for best results. While modern speech recognition is
-                quite robust, background noise can interfere with accuracy. Position your microphone appropriately, whether
-                it's built into your device or an external one. Most importantly, enjoy the experience of reading in this
-                new, interactive way.
-            </p>
-
-            <h2>The Future of Interactive Reading</h2>
-            <p>
-                As technology continues to evolve, we can expect even more innovative ways to interact with written content.
-                Imagine systems that not only scroll but also highlight the text you're reading, provide instant definitions
-                for unfamiliar words, or even adjust the reading material's complexity based on your comprehension.
-            </p>
-            <p>
-                The convergence of artificial intelligence, speech recognition, and natural language processing is opening
-                up exciting possibilities. In the future, reading might become an even more personalized and adaptive
-                experience, tailored to each individual's needs, preferences, and learning style.
-            </p>
-
-            <h2>Conclusion</h2>
-            <p>
-                This speech-controlled scrolling application is just one example of how technology can enhance traditional
-                activities. By combining the timeless practice of reading aloud with modern speech recognition, we create
-                a more engaging and hands-free experience. Whether you're a student, a professional, or simply someone who
-                loves to read, this tool offers a new way to interact with text.
-            </p>
-            <p>
-                So go ahead, click that "Start Reading" button, and experience reading in a whole new way. Let your voice
-                guide your journey through these words, and discover how natural and intuitive this technology can feel.
-                Happy reading, and may your scrolling always be smooth!
-            </p>
-        </div>
+<!-- Settings -->
+<dialog id="settingsDlg">
+  <div class="dlg-head">
+    <h2>Settings</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <div class="field">
+      <label for="fontSize">Text size</label>
+      <input id="fontSize" type="range" min="20" max="96" step="2">
+      <output id="fontSizeOut"></output>
+    </div>
+    <div class="field">
+      <label for="width">Column width</label>
+      <input id="width" type="range" min="20" max="90" step="2">
+      <output id="widthOut"></output>
+    </div>
+    <div class="field">
+      <label for="linePos">Reading line</label>
+      <input id="linePos" type="range" min="15" max="60" step="1">
+      <output id="linePosOut"></output>
+    </div>
+    <div class="field">
+      <label for="lang">Language</label>
+      <select id="lang">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="en-AU">English (Australia)</option>
+        <option value="en-CA">English (Canada)</option>
+        <option value="en-IN">English (India)</option>
+        <option value="es-ES">Español (España)</option>
+        <option value="es-MX">Español (México)</option>
+        <option value="fr-FR">Français</option>
+        <option value="de-DE">Deutsch</option>
+        <option value="it-IT">Italiano</option>
+        <option value="pt-BR">Português (Brasil)</option>
+        <option value="nl-NL">Nederlands</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="theme">Theme</label>
+      <select id="theme">
+        <option value="auto">Match system</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+    <div class="field check">
+      <input id="showHeard" type="checkbox">
+      <label for="showHeard">Show what the microphone hears</label>
     </div>
 
-    <div id="scrollIndicator" class="scroll-indicator">Scrolling...</div>
+    <h3>Keyboard shortcuts</h3>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td>Start or pause listening</td></tr>
+      <tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move back or forward one word</td></tr>
+      <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>Move to the previous or next line</td></tr>
+      <tr><td><kbd>Home</kbd></td><td>Go back to the beginning</td></tr>
+      <tr><td><kbd>+</kbd> <kbd>&minus;</kbd></td><td>Bigger or smaller text</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
+      <tr><td><kbd>E</kbd> / <kbd>S</kbd></td><td>Edit text / Settings</td></tr>
+      <tr><td>Click a word</td><td>Move your place to that word</td></tr>
+    </table>
+    <p class="hint">Chrome's speech recognition usually sends audio to Google's servers, so it needs an internet connection. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
+  </div>
+</dialog>
 
-    <script>
-        // Check for browser support
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+<script>
+(() => {
+  'use strict';
 
-        if (!SpeechRecognition) {
-            alert('Speech recognition is not supported in this browser. Please use Google Chrome.');
+  // ---------------------------------------------------------------------------
+  // Config & storage
+  // ---------------------------------------------------------------------------
+  const STORE_KEY = 'speechScroll.v2';
+  const LOOKAHEAD = 20;         // how many words ahead to look for the next spoken word
+  const RELOCATE_RANGE = 400;   // how far ahead to search when the reader seems lost
+  const DEFAULTS = { fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true };
+
+  const SAMPLE = `# Welcome to Speech Scroll
+
+Press the Start button, allow microphone access, and read this text out loud. The highlighted word shows where the app thinks you are, and the page scrolls to keep your place on the reading line.
+
+Speak at your normal pace. The app listens for the words on the page, so it keeps up when you read faster and waits when you stop. If you cough, pause, or say something that isn't in the text, it holds its place until you carry on.
+
+You can skip a few words or even a sentence, and it will find you again after you read a short phrase. If it ever loses track, click any word to move the highlight there, or use the arrow keys to nudge it.
+
+# Your own text
+
+To read something else, choose Edit text, paste your script, and press Use this text. You can also open a plain text file. A blank line starts a new paragraph, and a line starting with a hash sign becomes a heading.
+
+Your text, settings and place are remembered in this browser, so you can close the page and pick up where you left off.
+
+# Settings
+
+Open Settings to change the text size, the width of the column, and where the reading line sits on the screen. You can also choose the language you are reading in and switch between light and dark themes.
+
+Press the space bar to start or pause listening. Press F for full screen, and use the plus and minus keys to change the text size.
+
+Happy reading!`;
+
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  const stored = loadStore();
+  const settings = Object.assign({}, DEFAULTS, stored.settings || {});
+  let text = typeof stored.text === 'string' ? stored.text : SAMPLE;
+  let pos = Number.isInteger(stored.pos) ? stored.pos : 0;
+
+  let saveTimer = 0;
+  function saveSoon() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(STORE_KEY, JSON.stringify({ text, settings, pos }));
+      } catch (e) { /* storage unavailable: settings just won't persist */ }
+    }, 400);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DOM
+  // ---------------------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const reader = $('reader');
+  const textEl = $('text');
+  const marker = $('marker');
+  const micBtn = $('micBtn');
+  const micLabel = $('micLabel');
+  const micIcon = $('micIcon');
+  const dot = $('dot');
+  const statusText = $('statusText');
+  const progress = $('progress');
+  const heard = $('heard');
+  const banner = $('banner');
+  const bannerText = $('bannerText');
+  const editDlg = $('editDlg');
+  const editor = $('editor');
+  const settingsDlg = $('settingsDlg');
+
+  const MIC_ICON = micIcon.innerHTML;
+  const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
+
+  // ---------------------------------------------------------------------------
+  // Word normalisation & fuzzy matching
+  // ---------------------------------------------------------------------------
+  const NUMBERS = {
+    zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7',
+    eight: '8', nine: '9', ten: '10', eleven: '11', twelve: '12', thirteen: '13',
+    fourteen: '14', fifteen: '15', sixteen: '16', seventeen: '17', eighteen: '18',
+    nineteen: '19', twenty: '20', thirty: '30', forty: '40', fifty: '50', sixty: '60',
+    seventy: '70', eighty: '80', ninety: '90', hundred: '100'
+  };
+  const SAME_SOUND = {
+    too: 'to', there: 'their', theyre: 'their', youre: 'your', whos: 'whose',
+    ok: 'okay', mr: 'mister', mrs: 'missus', dr: 'doctor', vs: 'versus', etc: 'etcetera'
+  };
+  const canon = (w) => NUMBERS[w] || SAME_SOUND[w] || w;
+
+  // "Well-known," -> ["well", "known"];  "don't" -> ["dont"];  "1,000" -> ["1000"]
+  function normWords(s) {
+    return s
+      .toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/(\d)[,.](?=\d{3}\b)/g, '$1')
+      .replace(/['’‘`]/g, '')
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+      .map(canon);
+  }
+
+  function levenshtein(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 0; i < a.length; i++) {
+      const cur = [i + 1];
+      let rowMin = cur[0];
+      for (let j = 0; j < b.length; j++) {
+        cur[j + 1] = Math.min(prev[j + 1] + 1, cur[j] + 1, prev[j] + (a[i] === b[j] ? 0 : 1));
+        if (cur[j + 1] < rowMin) rowMin = cur[j + 1];
+      }
+      if (rowMin > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  // Tolerates plurals, tenses and small misrecognitions in longer words.
+  function similar(a, b) {
+    if (a === b) return true;
+    const shorter = Math.min(a.length, b.length);
+    if (shorter < 4) return false;
+    if ((a.startsWith(b) || b.startsWith(a)) && Math.abs(a.length - b.length) <= 3) return true;
+    const max = Math.max(a.length, b.length) >= 7 ? 2 : 1;
+    return levenshtein(a, b, max) <= max;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendering the text
+  // ---------------------------------------------------------------------------
+  // spans[s] = { el, first }   one per visible token; first = index into words, or -1
+  // words[i] = { n, span }     one per matchable word
+  let spans = [];
+  let words = [];
+
+  function render() {
+    textEl.textContent = '';
+    spans = [];
+    words = [];
+    const blocks = text.replace(/\r\n?/g, '\n').split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+
+    if (!blocks.length) {
+      const p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = 'No text yet. Choose "Edit text" to paste something to read.';
+      textEl.appendChild(p);
+    }
+
+    for (const block of blocks) {
+      const heading = /^#{1,6}\s+/.exec(block);
+      const el = document.createElement(heading ? 'h2' : 'p');
+      const body = heading ? block.slice(heading[0].length) : block;
+
+      body.split('\n').forEach((line, li) => {
+        if (li) el.appendChild(document.createElement('br'));
+        for (const part of line.split(/(\s+)/)) {
+          if (!part) continue;
+          if (/^\s+$/.test(part)) {
+            el.appendChild(document.createTextNode(' '));
+            continue;
+          }
+          const span = document.createElement('span');
+          span.className = 'w';
+          span.textContent = part;
+          span.dataset.s = spans.length;
+          const n = normWords(part);
+          spans.push({ el: span, first: n.length ? words.length : -1 });
+          for (const w of n) words.push({ n: w, span: spans.length - 1 });
+          el.appendChild(span);
         }
+      });
+      textEl.appendChild(el);
+    }
 
-        // Initialize speech recognition
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+    pos = Math.max(0, Math.min(pos, words.length));
+    shownSpan = spanAt(pos);
+    for (let s = 0; s < shownSpan; s++) spans[s].el.classList.add('read');
+    if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
+    updateProgress();
+  }
 
-        // Get DOM elements
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        const recognitionDisplay = document.getElementById('recognitionDisplay');
-        const content = document.getElementById('content');
-        const scrollIndicator = document.getElementById('scrollIndicator');
-        const scrollSpeedInput = document.getElementById('scrollSpeed');
-        const speedValue = document.getElementById('speedValue');
-        const sensitivityInput = document.getElementById('sensitivity');
-        const sensitivityValue = document.getElementById('sensitivityValue');
+  // ---------------------------------------------------------------------------
+  // Position tracking
+  // ---------------------------------------------------------------------------
+  let shownSpan = 0;   // span currently highlighted as "current"
+  let recent = [];     // last few spoken (normalised) words, for context
+  let misses = 0;      // spoken words in a row that didn't match anything nearby
 
-        // State variables
-        let isListening = false;
-        let scrollSpeed = 50;
-        let sensitivity = 5;
-        let lastSpeechTime = 0;
-        let scrollInterval = null;
-        let currentTranscript = '';
+  const spanAt = (i) => (i < words.length ? words[i].span : spans.length);
 
-        // Update settings displays
-        scrollSpeedInput.addEventListener('input', (e) => {
-            scrollSpeed = e.target.value;
-            speedValue.textContent = scrollSpeed;
-        });
+  function firstWordFrom(s) {
+    for (; s < spans.length; s++) if (spans[s].first >= 0) return spans[s].first;
+    return words.length;
+  }
 
-        sensitivityInput.addEventListener('input', (e) => {
-            sensitivity = e.target.value;
-            sensitivityValue.textContent = sensitivity;
-        });
+  function setPos(i, manual = false) {
+    pos = Math.max(0, Math.min(i, words.length));
+    const next = spanAt(pos);
+    if (next !== shownSpan) {
+      if (spans[shownSpan]) spans[shownSpan].el.classList.remove('current');
+      if (next > shownSpan) {
+        for (let s = shownSpan; s < next; s++) spans[s].el.classList.add('read');
+      } else {
+        for (let s = next; s < shownSpan; s++) spans[s].el.classList.remove('read');
+      }
+      shownSpan = next;
+      if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
+    }
+    if (manual) {
+      recent = [];
+      misses = 0;
+    }
+    scrollToCurrent(false);
+    updateProgress();
+    saveSoon();
 
-        // Start listening
-        startBtn.addEventListener('click', () => {
-            try {
-                recognition.start();
-                isListening = true;
-                startBtn.disabled = true;
-                stopBtn.disabled = false;
-                statusIndicator.classList.add('listening');
-                statusText.textContent = 'Listening...';
-                recognitionDisplay.classList.add('active');
-            } catch (error) {
-                console.error('Error starting speech recognition:', error);
-                alert('Could not start speech recognition. Please check microphone permissions.');
-            }
-        });
+    if (pos >= words.length && words.length && wantListening) {
+      stopListening();
+      setStatus('done');
+    }
+  }
 
-        // Stop listening
-        stopBtn.addEventListener('click', () => {
-            recognition.stop();
-            isListening = false;
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusIndicator.classList.remove('listening');
-            statusText.textContent = 'Stopped';
-            recognitionDisplay.classList.remove('active');
-            stopScrolling();
-        });
+  // How many of the previously spoken words line up with the text just before index j.
+  function contextScore(j) {
+    let p = j - 1;
+    let count = 0;
+    let fails = 0;
+    for (let k = recent.length - 2; k >= 0 && k >= recent.length - 4; k--) {
+      let found = -1;
+      for (let q = p; q >= 0 && q >= p - 2; q--) {
+        if (similar(words[q].n, recent[k])) { found = q; break; }
+      }
+      if (found >= 0) {
+        count++;
+        p = found - 1;
+      } else if (++fails >= 2) {
+        break;
+      }
+    }
+    return count;
+  }
 
-        // Handle speech recognition results
-        recognition.addEventListener('result', (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
+  function hearWord(w) {
+    recent.push(w);
+    if (recent.length > 8) recent.shift();
+    if (pos >= words.length) return;
 
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript + ' ';
-                } else {
-                    interimTranscript += transcript;
-                }
-            }
+    const end = Math.min(words.length, pos + LOOKAHEAD);
+    let best = -1;
+    let bestScore = -Infinity;
+    for (let j = pos; j < end; j++) {
+      if (!similar(words[j].n, w)) continue;
+      const d = j - pos;
+      const ctx = contextScore(j);
+      // Nearby words are accepted outright; further jumps need supporting context
+      // (or a long, distinctive word) so common words like "the" can't drag us ahead.
+      if (!(d <= 2 || ctx >= 1 || (w.length >= 6 && d <= 6))) continue;
+      const score = ctx * 2 - d * 0.3 + (words[j].n === w ? 0.5 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = j;
+      }
+    }
 
-            // Update display
-            if (finalTranscript) {
-                currentTranscript += finalTranscript;
-                recognitionDisplay.textContent = currentTranscript;
+    if (best >= 0) {
+      misses = 0;
+      setPos(best + 1);
+    } else if (++misses >= 2) {
+      relocate();
+    }
+  }
 
-                // Keep only last 200 characters for display
-                if (currentTranscript.length > 200) {
-                    currentTranscript = '...' + currentTranscript.slice(-200);
-                }
-            } else if (interimTranscript) {
-                recognitionDisplay.textContent = currentTranscript + interimTranscript;
-            }
+  // The reader may have jumped further ahead: look for the last three spoken words as a phrase.
+  function relocate() {
+    if (recent.length < 3) return;
+    const phrase = recent.slice(-3);
+    if (phrase.join('').length < 9) return; // too generic ("and it is") to trust
+    const end = Math.min(words.length - 2, pos + RELOCATE_RANGE);
+    for (let s = pos; s < end; s++) {
+      if (similar(words[s].n, phrase[0]) && similar(words[s + 1].n, phrase[1]) && similar(words[s + 2].n, phrase[2])) {
+        misses = 0;
+        setPos(s + 3);
+        return;
+      }
+    }
+  }
 
-            // Trigger scrolling when speech is detected
-            if (finalTranscript || interimTranscript) {
-                lastSpeechTime = Date.now();
-                startScrolling();
-            }
-        });
+  // ---------------------------------------------------------------------------
+  // Scrolling
+  // ---------------------------------------------------------------------------
+  let animId = 0;
+  let animY = 0;
+  let animTarget = 0;
+  let lastFrame = 0;
 
-        // Handle errors
-        recognition.addEventListener('error', (event) => {
-            console.error('Speech recognition error:', event.error);
-            if (event.error === 'no-speech') {
-                console.log('No speech detected');
-            } else if (event.error === 'not-allowed') {
-                alert('Microphone access was denied. Please grant permission and try again.');
-                stopBtn.click();
-            }
-        });
+  function scrollToCurrent(instant) {
+    if (!spans.length) return;
+    const el = spans[Math.min(shownSpan, spans.length - 1)].el;
+    const rr = reader.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    let target = reader.scrollTop + (er.top - rr.top) + er.height / 2 - reader.clientHeight * (settings.linePos / 100);
+    target = Math.max(0, Math.min(target, reader.scrollHeight - reader.clientHeight));
 
-        // Handle recognition end
-        recognition.addEventListener('end', () => {
-            if (isListening) {
-                // Restart if it was stopped unexpectedly
-                try {
-                    recognition.start();
-                } catch (error) {
-                    console.log('Recognition ended');
-                }
-            }
-        });
+    if (instant) {
+      cancelScroll();
+      reader.scrollTop = target;
+      return;
+    }
+    animTarget = target;
+    if (!animId) {
+      animY = reader.scrollTop;
+      lastFrame = performance.now();
+      animId = requestAnimationFrame(stepScroll);
+    }
+  }
 
-        // Scrolling functions
-        function startScrolling() {
-            scrollIndicator.classList.add('active');
+  function stepScroll(t) {
+    const dt = Math.min(64, t - lastFrame);
+    lastFrame = t;
+    animY += (animTarget - animY) * (1 - Math.exp(-dt / 140));
+    if (Math.abs(animTarget - animY) < 0.5) {
+      reader.scrollTop = animTarget;
+      animId = 0;
+      return;
+    }
+    reader.scrollTop = animY;
+    animId = requestAnimationFrame(stepScroll);
+  }
 
-            if (!scrollInterval) {
-                scrollInterval = setInterval(() => {
-                    const timeSinceLastSpeech = Date.now() - lastSpeechTime;
+  function cancelScroll() {
+    if (animId) cancelAnimationFrame(animId);
+    animId = 0;
+  }
 
-                    // Stop scrolling if no speech detected for 2 seconds
-                    if (timeSinceLastSpeech > 2000) {
-                        stopScrolling();
-                        return;
-                    }
+  // Let the reader scroll by hand without the animation fighting back.
+  reader.addEventListener('wheel', cancelScroll, { passive: true });
+  reader.addEventListener('touchstart', cancelScroll, { passive: true });
 
-                    // Calculate scroll amount based on speed and sensitivity
-                    const scrollAmount = (scrollSpeed / 10) * (sensitivity / 5);
-                    content.scrollTop += scrollAmount;
+  function layout() {
+    const h = reader.clientHeight;
+    const line = settings.linePos / 100;
+    const lineHeight = settings.fontSize * 1.5;
+    textEl.style.paddingTop = Math.round(h * line) + 'px';
+    textEl.style.paddingBottom = Math.round(h * (1 - line)) + 'px';
+    marker.style.top = Math.round(reader.offsetTop + h * line - lineHeight / 2) + 'px';
+    marker.style.height = Math.round(lineHeight) + 'px';
+  }
 
-                    // Check if reached bottom
-                    if (content.scrollTop >= content.scrollHeight - content.clientHeight) {
-                        stopScrolling();
-                    }
-                }, 100);
-            }
+  function updateProgress() {
+    const pct = words.length ? (pos / words.length) * 100 : 0;
+    progress.style.width = pct + '%';
+    progress.title = `Word ${Math.min(pos + 1, words.length)} of ${words.length}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Speech recognition
+  // ---------------------------------------------------------------------------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  let wantListening = false;
+  let recActive = false;
+  let restartTimes = [];
+  // Per recognition session: words from finished results, and how many words we've fed to the matcher.
+  let sessionFinal = [];
+  let finalUpTo = 0;
+  let consumed = 0;
+  let heardLog = [];
+
+  function createRecognizer() {
+    rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => {
+      recActive = true;
+      sessionFinal = [];
+      finalUpTo = 0;
+      consumed = 0;
+      if (wantListening) setStatus('listening');
+    };
+
+    rec.onresult = (e) => {
+      if (!wantListening) return;
+      const res = e.results;
+      while (finalUpTo < res.length && res[finalUpTo].isFinal) {
+        const toks = tokens(res[finalUpTo][0].transcript);
+        sessionFinal.push(...toks);
+        heardLog.push(...toks);
+        finalUpTo++;
+      }
+      if (heardLog.length > 40) heardLog = heardLog.slice(-40);
+      const interim = [];
+      for (let i = finalUpTo; i < res.length; i++) interim.push(...tokens(res[i][0].transcript));
+
+      // Interim results are fed immediately so scrolling doesn't lag a sentence behind.
+      // Only words we haven't seen yet are fed, since each result repeats the earlier ones.
+      const all = sessionFinal.concat(interim);
+      if (all.length < consumed) consumed = all.length;
+      for (let k = consumed; k < all.length; k++) {
+        for (const w of normWords(all[k])) hearWord(w);
+      }
+      consumed = all.length;
+      showHeard(interim);
+    };
+
+    rec.onerror = (e) => {
+      const messages = {
+        'not-allowed': 'Microphone access is blocked. Click the icon at the right of Chrome\'s address bar, allow the microphone, then press Start again.',
+        'service-not-allowed': 'Chrome won\'t allow speech recognition here. Check the microphone permission in the address bar, then press Start again.',
+        'audio-capture': 'No microphone was found. Plug one in or check your system sound settings, then press Start again.',
+        'network': 'Chrome\'s speech recognition needs an internet connection. Check your connection, then press Start again.',
+        'language-not-supported': 'Chrome doesn\'t support speech recognition for the selected language. Pick another one in Settings.'
+      };
+      if (messages[e.error]) {
+        stopListening();
+        setStatus('error');
+        showBanner(messages[e.error]);
+      }
+      // 'no-speech' and 'aborted' are routine; the end handler restarts as needed.
+    };
+
+    rec.onend = () => {
+      recActive = false;
+      if (!wantListening) return;
+      // Chrome ends sessions by itself every so often; restart, but not in a tight loop.
+      const now = Date.now();
+      restartTimes = restartTimes.filter((t) => now - t < 10000);
+      restartTimes.push(now);
+      if (restartTimes.length > 5) {
+        stopListening();
+        setStatus('error');
+        showBanner('Speech recognition keeps stopping. Check your microphone and internet connection, then press Start again.');
+        return;
+      }
+      setTimeout(() => {
+        if (wantListening && !recActive) {
+          try { rec.start(); } catch (err) { /* already starting */ }
         }
+      }, 250);
+    };
+  }
 
-        function stopScrolling() {
-            scrollIndicator.classList.remove('active');
-            if (scrollInterval) {
-                clearInterval(scrollInterval);
-                scrollInterval = null;
-            }
-        }
+  const tokens = (s) => s.trim().split(/\s+/).filter(Boolean);
 
-        // Prevent page from scrolling when content scrolls
-        content.addEventListener('wheel', (e) => {
-            e.stopPropagation();
-        }, { passive: true });
-    </script>
+  function startListening() {
+    if (!SR) return;
+    if (!words.length) {
+      showBanner('There\'s no text to read yet. Choose "Edit text" to add some.', true);
+      return;
+    }
+    if (pos >= words.length) setPos(0, true);
+    hideBanner();
+    if (!rec) createRecognizer();
+    rec.lang = settings.lang;
+    wantListening = true;
+    restartTimes = [];
+    setStatus('starting');
+    if (!recActive) {
+      try { rec.start(); } catch (err) { /* already starting */ }
+    }
+    updateMicButton();
+  }
+
+  function stopListening() {
+    wantListening = false;
+    if (rec) {
+      try { rec.abort(); } catch (err) { /* not running */ }
+    }
+    setStatus('off');
+    updateMicButton();
+  }
+
+  const toggleListening = () => (wantListening ? stopListening() : startListening());
+
+  function updateMicButton() {
+    micBtn.classList.toggle('listening', wantListening);
+    micLabel.textContent = wantListening ? 'Pause' : 'Start';
+    micIcon.innerHTML = wantListening ? PAUSE_ICON : MIC_ICON;
+  }
+
+  function setStatus(kind) {
+    const labels = {
+      off: 'Not listening', starting: 'Starting…', listening: 'Listening',
+      done: 'Finished', error: 'Stopped', unsupported: 'Not supported'
+    };
+    dot.className = 'dot ' + (kind === 'unsupported' ? 'error' : kind);
+    statusText.textContent = labels[kind];
+  }
+
+  function showHeard(interim) {
+    if (!settings.showHeard || (!heardLog.length && !interim.length)) {
+      heard.hidden = true;
+      return;
+    }
+    heard.hidden = false;
+    heard.textContent = '';
+    const finalPart = document.createElement('span');
+    finalPart.textContent = heardLog.slice(-16).join(' ') + ' ';
+    const interimPart = document.createElement('span');
+    interimPart.className = 'interim';
+    interimPart.textContent = interim.join(' ');
+    heard.append(finalPart, interimPart);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Banner
+  // ---------------------------------------------------------------------------
+  function showBanner(msg, info = false) {
+    bannerText.textContent = msg;
+    banner.classList.toggle('info', info);
+    banner.hidden = false;
+  }
+  function hideBanner() { banner.hidden = true; }
+  $('bannerClose').addEventListener('click', hideBanner);
+
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+  const controls = {
+    fontSize: { el: $('fontSize'), out: $('fontSizeOut'), fmt: (v) => v + 'px' },
+    width: { el: $('width'), out: $('widthOut'), fmt: (v) => v + 'ch' },
+    linePos: { el: $('linePos'), out: $('linePosOut'), fmt: (v) => v + '%' }
+  };
+
+  function applySettings() {
+    const root = document.documentElement;
+    root.style.setProperty('--fs', settings.fontSize + 'px');
+    root.style.setProperty('--measure', settings.width + 'ch');
+    if (settings.theme === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', settings.theme);
+    if (!settings.showHeard) heard.hidden = true;
+    for (const [key, c] of Object.entries(controls)) {
+      c.el.value = settings[key];
+      c.out.textContent = c.fmt(settings[key]);
+    }
+    $('lang').value = settings.lang;
+    $('theme').value = settings.theme;
+    $('showHeard').checked = settings.showHeard;
+    layout();
+    scrollToCurrent(true);
+    saveSoon();
+  }
+
+  for (const [key, c] of Object.entries(controls)) {
+    c.el.addEventListener('input', () => {
+      settings[key] = Number(c.el.value);
+      applySettings();
+    });
+  }
+  $('theme').addEventListener('change', (e) => {
+    settings.theme = e.target.value;
+    applySettings();
+  });
+  $('showHeard').addEventListener('change', (e) => {
+    settings.showHeard = e.target.checked;
+    applySettings();
+  });
+  $('lang').addEventListener('change', (e) => {
+    settings.lang = e.target.value;
+    saveSoon();
+    if (rec) {
+      rec.lang = settings.lang;
+      // Restart so the new language takes effect; the end handler starts it again.
+      if (wantListening) try { rec.abort(); } catch (err) { /* not running */ }
+    }
+  });
+
+  function changeFontSize(delta) {
+    settings.fontSize = Math.max(20, Math.min(96, settings.fontSize + delta));
+    applySettings();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Editing text
+  // ---------------------------------------------------------------------------
+  function openEditor() {
+    editor.value = text;
+    editDlg.showModal();
+    editor.focus();
+  }
+
+  $('applyBtn').addEventListener('click', () => {
+    stopListening();
+    text = editor.value;
+    pos = 0;
+    recent = [];
+    misses = 0;
+    render();
+    editDlg.close();
+    layout();
+    scrollToCurrent(true);
+    saveSoon();
+  });
+  $('sampleBtn').addEventListener('click', () => { editor.value = SAMPLE; });
+  $('openFileBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) editor.value = await file.text();
+    e.target.value = '';
+  });
+
+  for (const btn of document.querySelectorAll('[data-close]')) {
+    btn.addEventListener('click', () => btn.closest('dialog').close());
+  }
+  // Click on the backdrop closes a dialog.
+  for (const dlg of [editDlg, settingsDlg]) {
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+  textEl.addEventListener('click', (e) => {
+    const w = e.target.closest('.w');
+    if (w) setPos(firstWordFrom(Number(w.dataset.s)), true);
+  });
+
+  function stepWord(dir) {
+    if (dir > 0) {
+      setPos(firstWordFrom(shownSpan + 1), true);
+    } else {
+      for (let s = Math.min(shownSpan, spans.length) - 1; s >= 0; s--) {
+        if (spans[s].first >= 0) return setPos(spans[s].first, true);
+      }
+    }
+  }
+
+  function stepLine(dir) {
+    if (!spans.length) return;
+    const topOf = (s) => spans[s].el.getBoundingClientRect().top;
+    const cur = Math.min(shownSpan, spans.length - 1);
+    const top = topOf(cur);
+    if (dir > 0) {
+      for (let s = cur + 1; s < spans.length; s++) {
+        if (topOf(s) > top + 2) return setPos(firstWordFrom(s), true);
+      }
+      return setPos(words.length, true);
+    }
+    let s = cur - 1;
+    while (s >= 0 && topOf(s) >= top - 2) s--;
+    if (s < 0) return setPos(0, true);
+    const prevTop = topOf(s);
+    while (s > 0 && Math.abs(topOf(s - 1) - prevTop) < 2) s--;
+    setPos(firstWordFrom(s), true);
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  micBtn.addEventListener('click', toggleListening);
+  $('restartBtn').addEventListener('click', () => setPos(0, true));
+  $('editBtn').addEventListener('click', openEditor);
+  $('settingsBtn').addEventListener('click', () => settingsDlg.showModal());
+  $('fullBtn').addEventListener('click', toggleFullscreen);
+  // Don't leave toolbar buttons focused, or Space would "click" them again.
+  for (const b of document.querySelectorAll('.toolbar button')) {
+    b.addEventListener('click', () => b.blur());
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    const actions = {
+      ' ': toggleListening,
+      ArrowRight: () => stepWord(1),
+      ArrowLeft: () => stepWord(-1),
+      ArrowDown: () => stepLine(1),
+      ArrowUp: () => stepLine(-1),
+      Home: () => setPos(0, true),
+      '+': () => changeFontSize(4),
+      '=': () => changeFontSize(4),
+      '-': () => changeFontSize(-4),
+      f: toggleFullscreen,
+      e: openEditor,
+      s: () => settingsDlg.showModal()
+    };
+    const action = actions[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+    if (action) {
+      e.preventDefault();
+      action();
+    }
+  });
+
+  let resizeFrame = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      layout();
+      scrollToCurrent(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Start up
+  // ---------------------------------------------------------------------------
+  render();
+  applySettings();
+
+  if (!SR) {
+    micBtn.disabled = true;
+    setStatus('unsupported');
+    showBanner('Speech recognition isn\'t available in this browser. Open this page in Google Chrome. You can still move through the text with the arrow keys.');
+  }
+})();
+</script>
 </body>
 </html>
