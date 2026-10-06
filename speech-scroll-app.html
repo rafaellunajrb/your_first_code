@@ -16,6 +16,10 @@
     --accent: #2f6fde;
     --accent-text: #ffffff;
     --danger: #c73e3e;
+    --danger-bg: #c73e3e;
+    --warn: #c98a00;
+    --warn-line: rgba(232, 160, 0, 0.16);
+    --warn-edge: rgba(232, 160, 0, 0.9);
     --ok: #1f9d55;
     --hl: rgba(255, 204, 51, 0.55);
     --line: rgba(47, 111, 222, 0.10);
@@ -37,8 +41,12 @@
       --accent: #6f9dff;
       --accent-text: #0d1320;
       --danger: #ff6b6b;
+      --danger-bg: #c94848;
+      --warn: #f2b33d;
+      --warn-line: rgba(242, 179, 61, 0.13);
+      --warn-edge: rgba(242, 179, 61, 0.85);
       --ok: #4ad084;
-      --hl: rgba(255, 204, 51, 0.30);
+      --hl: rgba(255, 204, 51, 0.45);
       --line: rgba(111, 157, 255, 0.09);
       --line-edge: rgba(111, 157, 255, 0.6);
       --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
@@ -56,8 +64,12 @@
     --accent: #6f9dff;
     --accent-text: #0d1320;
     --danger: #ff6b6b;
+    --danger-bg: #c94848;
+    --warn: #f2b33d;
+    --warn-line: rgba(242, 179, 61, 0.13);
+    --warn-edge: rgba(242, 179, 61, 0.85);
     --ok: #4ad084;
-    --hl: rgba(255, 204, 51, 0.30);
+    --hl: rgba(255, 204, 51, 0.45);
     --line: rgba(111, 157, 255, 0.09);
     --line-edge: rgba(111, 157, 255, 0.6);
     --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
@@ -116,7 +128,7 @@
     justify-content: center;
   }
   .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
-  .btn.primary.listening { background: var(--danger); color: #fff; }
+  .btn.primary.listening { background: var(--danger-bg); color: #fff; }
   .status {
     display: flex;
     align-items: center;
@@ -125,11 +137,14 @@
     color: var(--subtle);
     margin-left: 4px;
     white-space: nowrap;
+    min-width: 0;
   }
+  .status-text { overflow: hidden; text-overflow: ellipsis; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.listening { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
   .dot.starting { background: var(--accent); animation: pulse 0.8s ease-in-out infinite; }
   .dot.error { background: var(--danger); }
+  .dot.lost, .dot.reconnecting { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: 0.35; } }
 
   .progress {
@@ -152,7 +167,9 @@
     border-left: 6px solid var(--line-edge);
     pointer-events: none;
     z-index: 0;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
+  #marker.lost { background: var(--warn-line); border-left-color: var(--warn-edge); }
   #reader {
     position: fixed;
     top: 59px;
@@ -181,6 +198,8 @@
     transition: color 0.25s ease, background-color 0.15s ease;
   }
   .w:hover { text-decoration: underline dotted; text-underline-offset: 0.15em; }
+  body.listening .w:hover { text-decoration: none; } /* no distracting underlines under the mouse while reading */
+  #text.jumping .w { transition: none; } /* big jumps would otherwise animate thousands of words */
   .w.read { color: var(--muted); }
   .w.current { background: var(--hl); box-shadow: 0 0 0 0.08em var(--hl); color: var(--text); }
 
@@ -205,7 +224,7 @@
     box-shadow: var(--shadow);
     z-index: 15;
   }
-  #heard span { direction: ltr; unicode-bidi: isolate; }
+  #heard > span { direction: ltr; unicode-bidi: isolate; }
   #heard .interim { font-style: italic; opacity: 0.7; }
   .btn.back {
     position: fixed;
@@ -215,6 +234,7 @@
     box-shadow: var(--shadow);
     z-index: 16;
   }
+  body.has-heard .btn.back { bottom: 68px; } /* sit above the "heard" strip */
   .btn.back svg { transition: transform 0.2s ease; }
   .btn.back.up svg { transform: rotate(180deg); }
   #banner {
@@ -338,7 +358,6 @@
     .toolbar { gap: 6px; }
     .btn .label { display: none; }
     .btn.primary .label { display: inline; }
-    .btn.back { bottom: 68px; } /* clear of the "heard" strip */
     .btn { padding: 0 9px; }
     .status .status-text { display: none; }
     .field { grid-template-columns: 1fr 48px; }
@@ -360,6 +379,10 @@
     <span id="statusText" class="status-text">Not listening</span>
   </div>
   <div class="spacer"></div>
+  <button id="debugBtn" class="btn" title="Download a log of what Chrome heard, to help tune tracking" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+    <span class="label">Download session log</span>
+  </button>
   <button id="restartBtn" class="btn" title="Go back to the beginning (Home)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
     <span class="label">Restart</span>
@@ -406,7 +429,7 @@
     <button id="sampleBtn" class="btn">Load sample</button>
     <input id="fileInput" type="file" accept=".txt,.md,text/plain" hidden>
     <div class="spacer"></div>
-    <button class="btn" data-close>Cancel</button>
+    <button id="cancelBtn" class="btn">Cancel</button>
     <button id="applyBtn" class="btn primary">Use this text</button>
   </div>
 </dialog>
@@ -468,13 +491,16 @@
       <tr><td><kbd>Space</kbd></td><td>Start or pause listening</td></tr>
       <tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move back or forward one word</td></tr>
       <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>Move to the previous or next line</td></tr>
+      <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Previous or next line (works with presentation clickers)</td></tr>
+      <tr><td><kbd>B</kbd></td><td>Start or pause listening (a clicker's "blank screen" button)</td></tr>
       <tr><td><kbd>Home</kbd></td><td>Go back to the beginning</td></tr>
       <tr><td><kbd>+</kbd> <kbd>&minus;</kbd></td><td>Bigger or smaller text</td></tr>
       <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
       <tr><td><kbd>E</kbd> / <kbd>S</kbd></td><td>Edit text / Settings</td></tr>
       <tr><td>Click a word</td><td>Move your place to that word</td></tr>
     </table>
-    <p class="hint">Chrome's speech recognition usually sends audio to Google's servers, so it needs an internet connection. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
+    <p class="hint">Privacy: Chrome's speech recognition sends your audio to Google's speech service, so it needs an internet connection. Your text and settings stay in this browser. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
+    <p class="hint">Tracking trouble? Open this page with <strong>?debug</strong> at the end of its address, read for a minute, then press <strong>Download session log</strong> and share the file.</p>
   </div>
 </dialog>
 
@@ -514,27 +540,83 @@ Press the space bar to start or pause listening. Press F for full screen, and us
 
 Happy reading!`;
 
+  const RANGES = { fontSize: [20, 96], width: [20, 90], linePos: [15, 60] };
+  const LANGS = [...document.querySelectorAll('#lang option')].map((o) => o.value);
+
   function loadStore() {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
-      return raw ? JSON.parse(raw) : {};
+      const data = JSON.parse(localStorage.getItem(STORE_KEY));
+      return data && typeof data === 'object' ? data : {};
     } catch (e) {
       return {};
     }
   }
+
+  // Ignore saved values of the wrong type or out of range rather than rendering a broken page.
+  function cleanSettings(saved) {
+    const out = Object.assign({}, DEFAULTS, { lang: browserLang() });
+    if (!saved || typeof saved !== 'object') return out;
+    for (const key of Object.keys(DEFAULTS)) {
+      if (typeof saved[key] !== typeof DEFAULTS[key]) continue;
+      if (RANGES[key]) out[key] = Math.max(RANGES[key][0], Math.min(RANGES[key][1], saved[key]));
+      else out[key] = saved[key];
+    }
+    if (!LANGS.includes(out.lang)) out.lang = browserLang();
+    if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
+    return out;
+  }
+
+  // Start with the browser's own language/accent (e.g. en-GB) when we offer it.
+  function browserLang() {
+    const prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    for (const pref of prefs) {
+      const exact = LANGS.find((l) => l.toLowerCase() === pref.toLowerCase());
+      if (exact) return exact;
+    }
+    for (const pref of prefs) {
+      const base = pref.split('-')[0].toLowerCase();
+      const close = LANGS.find((l) => l.split('-')[0] === base);
+      if (close) return close;
+    }
+    return DEFAULTS.lang;
+  }
+
   const stored = loadStore();
-  const settings = Object.assign({}, DEFAULTS, stored.settings || {});
+  const settings = cleanSettings(stored.settings);
   let text = typeof stored.text === 'string' ? stored.text : SAMPLE;
-  let pos = Number.isInteger(stored.pos) ? stored.pos : 0;
+  let pos = Number.isInteger(stored.pos) && stored.pos >= 0 ? stored.pos : 0;
+  let seenMicHint = stored.seenMicHint === true;
 
   let saveTimer = 0;
   function saveSoon() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(STORE_KEY, JSON.stringify({ text, settings, pos }));
+        localStorage.setItem(STORE_KEY, JSON.stringify({ text, settings, pos, seenMicHint }));
       } catch (e) { /* storage unavailable: settings just won't persist */ }
     }, 400);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Debug session log (open the page with ?debug): records what Chrome heard so a
+  // real read-through can be replayed and used to tune the tracking.
+  // ---------------------------------------------------------------------------
+  const DEBUG = /\bdebug\b/i.test(location.search + location.hash);
+  const debugLog = [];
+  function logEvent(type, data) {
+    if (!DEBUG || debugLog.length >= 5000) return;
+    debugLog.push(Object.assign({ t: Math.round(performance.now()), type, pos }, data));
+  }
+  function downloadLog() {
+    const blob = new Blob([JSON.stringify({
+      app: 'speech-scroll', saved: new Date().toISOString(), userAgent: navigator.userAgent,
+      lang: settings.lang, text, events: debugLog
+    }, null, 1)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'speech-scroll-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   // ---------------------------------------------------------------------------
@@ -557,6 +639,7 @@ Happy reading!`;
   const editor = $('editor');
   const settingsDlg = $('settingsDlg');
   const backBtn = $('backBtn');
+  const debugBtn = $('debugBtn');
 
   const MIC_ICON = micIcon.innerHTML;
   const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
@@ -581,7 +664,7 @@ Happy reading!`;
   function normWords(s) {
     return s
       .toLowerCase()
-      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/(\d)[,.](?=\d{3}\b)/g, '$1')
       .replace(/['’‘`]/g, '')
       .split(/[^\p{L}\p{N}]+/u)
@@ -627,7 +710,19 @@ Happy reading!`;
     textEl.textContent = '';
     spans = [];
     words = [];
-    const blocks = text.replace(/\r\n?/g, '\n').split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+    // A "# " line is always its own heading; other lines group into paragraphs at blank lines.
+    const blocks = [];
+    let para = null;
+    for (const raw of text.replace(/\r\n?/g, '\n').split('\n')) {
+      const line = raw.trim();
+      const heading = /^#{1,6}\s+/.exec(line);
+      if (!line || heading) para = null;
+      if (heading) blocks.push({ tag: 'h2', lines: [line.slice(heading[0].length)] });
+      else if (line) {
+        if (!para) blocks.push(para = { tag: 'p', lines: [] });
+        para.lines.push(line);
+      }
+    }
 
     if (!blocks.length) {
       const p = document.createElement('p');
@@ -637,11 +732,9 @@ Happy reading!`;
     }
 
     for (const block of blocks) {
-      const heading = /^#{1,6}\s+/.exec(block);
-      const el = document.createElement(heading ? 'h2' : 'p');
-      const body = heading ? block.slice(heading[0].length) : block;
+      const el = document.createElement(block.tag);
 
-      body.split('\n').forEach((line, li) => {
+      block.lines.forEach((line, li) => {
         if (li) el.appendChild(document.createElement('br'));
         for (const part of line.split(/(\s+)/)) {
           if (!part) continue;
@@ -675,6 +768,8 @@ Happy reading!`;
   let shownSpan = 0;   // span currently highlighted as "current"
   let recent = [];     // last few spoken (normalised) words, for context
   let misses = 0;      // spoken words in a row that didn't match anything nearby
+  let lost = false;    // showing the "lost you" warning
+  const LOST_AFTER = 8; // misses before we say so (noisy but on-track reading can reach 7)
 
   const spanAt = (i) => (i < words.length ? words[i].span : spans.length);
 
@@ -687,6 +782,10 @@ Happy reading!`;
     pos = Math.max(0, Math.min(i, words.length));
     const next = spanAt(pos);
     if (next !== shownSpan) {
+      if (Math.abs(next - shownSpan) > 40) {
+        textEl.classList.add('jumping');
+        requestAnimationFrame(() => requestAnimationFrame(() => textEl.classList.remove('jumping')));
+      }
       if (spans[shownSpan]) spans[shownSpan].el.classList.remove('current');
       if (next > shownSpan) {
         for (let s = shownSpan; s < next; s++) spans[s].el.classList.add('read');
@@ -699,6 +798,8 @@ Happy reading!`;
     if (manual) {
       recent = [];
       misses = 0;
+      setLost(false);
+      logEvent('jump', {});
     }
     // After a hand scroll, give the reader a moment to look around before following again.
     if (manual || Date.now() - lastManualScroll > FOLLOW_PAUSE) scrollToCurrent(false);
@@ -706,28 +807,31 @@ Happy reading!`;
     updateProgress();
     saveSoon();
 
-    if (pos >= words.length && words.length && wantListening) {
-      stopListening();
-      setStatus('done');
-    }
+    // Speech only finishes the script on a final result (see onresult), so an early guess
+    // at the last word can't cut the reader off; a manual jump to the end finishes at once.
+    if (manual && atEnd() && wantListening) finish();
   }
 
-  // How many of the previously spoken words line up with the text just before index j.
+  const atEnd = () => words.length > 0 && pos >= words.length;
+
+  function finish() {
+    stopListening();
+    setStatus('done');
+    showBanner('You reached the end. Press Restart (or Home) to read it again.', true);
+  }
+
+  // How many of the previously spoken words line up, in order, with the text just before index j.
   function contextScore(j) {
     let p = j - 1;
     let count = 0;
-    let fails = 0;
     for (let k = recent.length - 2; k >= 0 && k >= recent.length - 4; k--) {
       let found = -1;
       for (let q = p; q >= 0 && q >= p - 2; q--) {
         if (similar(words[q].n, recent[k])) { found = q; break; }
       }
-      if (found >= 0) {
-        count++;
-        p = found - 1;
-      } else if (++fails >= 2) {
-        break;
-      }
+      if (found < 0) break;
+      count++;
+      p = found - 1;
     }
     return count;
   }
@@ -744,9 +848,11 @@ Happy reading!`;
       if (!similar(words[j].n, w)) continue;
       const d = j - pos;
       const ctx = contextScore(j);
-      // Nearby words are accepted outright; further jumps need supporting context
-      // (or a long, distinctive word) so common words like "the" can't drag us ahead.
-      if (!(d <= 2 || ctx >= 1 || (w.length >= 6 && d <= 6))) continue;
+      // Nearby words are accepted outright. Further jumps need the previous two spoken words
+      // to line up (or one substantial word, or a long distinctive word), so a stray "to"
+      // or "it" plus one common word can't drag the highlight ahead of the reader.
+      const prevWord = recent[recent.length - 2] || '';
+      if (!(d <= 2 || ctx >= 2 || (ctx === 1 && prevWord.length >= 4) || (w.length >= 6 && d <= 6))) continue;
       const score = ctx * 2 - d * 0.3 + (words[j].n === w ? 0.5 : 0);
       if (score > bestScore) {
         bestScore = score;
@@ -756,10 +862,21 @@ Happy reading!`;
 
     if (best >= 0) {
       misses = 0;
+      setLost(false);
       setPos(best + 1);
     } else if (++misses >= 2) {
       relocate();
+      if (misses >= LOST_AFTER) setLost(true);
     }
+  }
+
+  // Tell the reader when their words stop matching the text, instead of silently stalling.
+  function setLost(on) {
+    if (lost === on) return;
+    lost = on;
+    marker.classList.toggle('lost', on);
+    setStatus(statusKind);
+    if (on) logEvent('lost', {});
   }
 
   const phraseAt = (s, phrase) => phrase.every((w, t) => words[s + t] && similar(words[s + t].n, w));
@@ -774,6 +891,7 @@ Happy reading!`;
         for (let s = pos; s < end; s++) {
           if (phraseAt(s, phrase)) {
             misses = 0;
+            setLost(false);
             setPos(s + 3);
             return;
           }
@@ -789,6 +907,7 @@ Happy reading!`;
       for (let s = pos - 6; s >= Math.max(0, pos - REREAD_RANGE); s--) {
         if (phraseAt(s, phrase)) {
           misses = 0;
+          setLost(false);
           setPos(s + 4);
           return;
         }
@@ -904,11 +1023,16 @@ Happy reading!`;
   let wantListening = false;
   let recActive = false;
   let restartTimes = [];
+  let netFails = 0;        // consecutive 'network' errors; retried with backoff before giving up
+  let quietTimer = 0;      // warns when nothing at all has been heard for a while
   // Per recognition session: words from finished results, and how many words we've fed to the matcher.
   let sessionFinal = [];
   let finalUpTo = 0;
   let consumed = 0;
   let heardLog = [];
+
+  const QUIET_WARN = 10000;  // ms without any result before suggesting a microphone check
+  const MAX_NET_RETRIES = 4;
 
   function createRecognizer() {
     rec = new SR();
@@ -921,12 +1045,28 @@ Happy reading!`;
       sessionFinal = [];
       finalUpTo = 0;
       consumed = 0;
+      logEvent('start', {});
+    };
+
+    // "Listening" only once the microphone is actually open.
+    rec.onaudiostart = () => {
+      logEvent('audiostart', {});
       if (wantListening) setStatus('listening');
     };
 
     rec.onresult = (e) => {
       if (!wantListening) return;
       const res = e.results;
+      logEvent('result', {
+        ri: e.resultIndex,
+        n: res.length,
+        r: Array.from({ length: res.length - e.resultIndex }, (_, k) => {
+          const r = res[e.resultIndex + k];
+          return { t: r[0].transcript, f: r.isFinal };
+        })
+      });
+      heardSomething();
+
       while (finalUpTo < res.length && res[finalUpTo].isFinal) {
         const toks = tokens(res[finalUpTo][0].transcript);
         sessionFinal.push(...toks);
@@ -946,14 +1086,29 @@ Happy reading!`;
       }
       consumed = all.length;
       showHeard(interim);
+
+      // Finish only once Chrome has settled on its final words, not on an early guess.
+      if (atEnd() && !interim.length) finish();
     };
 
     rec.onerror = (e) => {
+      logEvent('error', { error: e.error });
+      if (e.error === 'network') {
+        // Often a brief Wi-Fi/VPN blip: retry a few times (the end handler restarts with backoff).
+        netFails++;
+        if (netFails > MAX_NET_RETRIES || navigator.onLine === false) {
+          stopListening();
+          setStatus('error');
+          showBanner('Chrome\'s speech recognition needs an internet connection, and it can\'t reach it right now. Check your connection, then press Start again.');
+        } else {
+          setStatus('reconnecting');
+        }
+        return;
+      }
       const messages = {
         'not-allowed': 'Microphone access is blocked. Click the icon at the right of Chrome\'s address bar, allow the microphone, then press Start again.',
         'service-not-allowed': 'Chrome won\'t allow speech recognition here. Check the microphone permission in the address bar, then press Start again.',
         'audio-capture': 'No microphone was found. Plug one in or check your system sound settings, then press Start again.',
-        'network': 'Chrome\'s speech recognition needs an internet connection. Check your connection, then press Start again.',
         'language-not-supported': 'Chrome doesn\'t support speech recognition for the selected language. Pick another one in Settings.'
       };
       if (messages[e.error]) {
@@ -966,6 +1121,7 @@ Happy reading!`;
 
     rec.onend = () => {
       recActive = false;
+      logEvent('end', {});
       if (!wantListening) return;
       // Chrome ends sessions by itself every so often; restart, but not in a tight loop.
       const now = Date.now();
@@ -977,12 +1133,43 @@ Happy reading!`;
         showBanner('Speech recognition keeps stopping. Check your microphone and internet connection, then press Start again.');
         return;
       }
-      setTimeout(() => {
-        if (wantListening && !recActive) {
-          try { rec.start(); } catch (err) { /* already starting */ }
-        }
-      }, 250);
+      // Restart straight away (words spoken in the gap are lost), or back off after network errors.
+      const delay = netFails ? 500 * 2 ** (netFails - 1) : 30;
+      setTimeout(restartRecognizer, delay);
     };
+  }
+
+  function restartRecognizer() {
+    if (!wantListening || recActive) return;
+    try {
+      rec.start();
+    } catch (err) {
+      logEvent('start-failed', { error: String(err && err.name) });
+    }
+  }
+
+  // If the connection drops and comes back while we're retrying, resume straight away.
+  window.addEventListener('online', () => {
+    if (wantListening && !recActive) restartRecognizer();
+  });
+
+  function heardSomething() {
+    netFails = 0;
+    if (statusKind === 'reconnecting') setStatus('listening');
+    if (bannerKind === 'quiet' || bannerKind === 'mic-hint') hideBanner();
+    armQuietTimer();
+  }
+
+  // Three different problems (muted/wrong mic, no connection, nobody speaking) all look like
+  // "nothing happens"; say so after a while rather than pulsing "Listening" forever.
+  function armQuietTimer() {
+    clearTimeout(quietTimer);
+    if (!wantListening) return;
+    quietTimer = setTimeout(() => {
+      if (!wantListening) return;
+      logEvent('quiet', {});
+      showBanner('I haven\'t heard anything for a while. If you\'re reading aloud, check that the right microphone is selected (the microphone icon in Chrome\'s address bar) and that you\'re online.', true, 'quiet');
+    }, QUIET_WARN);
   }
 
   const tokens = (s) => s.trim().split(/\s+/).filter(Boolean);
@@ -993,27 +1180,43 @@ Happy reading!`;
       showBanner('There\'s no text to read yet. Choose "Edit text" to add some.', true);
       return;
     }
-    if (pos >= words.length) setPos(0, true);
+    if (atEnd()) {
+      showBanner('You\'re at the end of the text. Press Restart (or Home) to read it again.', true);
+      return;
+    }
     hideBanner();
+    if (!seenMicHint) {
+      seenMicHint = true;
+      saveSoon();
+      showBanner('Chrome will ask to use your microphone: choose Allow. Your speech is turned into text by Google\'s speech service, then matched to your script here.', true, 'mic-hint');
+    }
     if (!rec) createRecognizer();
     rec.lang = settings.lang;
     wantListening = true;
+    document.body.classList.add('listening');
     restartTimes = [];
+    netFails = 0;
     setStatus('starting');
     if (!recActive) {
-      try { rec.start(); } catch (err) { /* already starting */ }
+      try { rec.start(); } catch (err) { logEvent('start-failed', { error: String(err && err.name) }); }
     }
+    armQuietTimer();
     keepScreenAwake(true);
     updateMicButton();
   }
 
   function stopListening() {
     wantListening = false;
+    document.body.classList.remove('listening');
     if (rec) {
       try { rec.abort(); } catch (err) { /* not running */ }
     }
+    clearTimeout(quietTimer);
+    if (bannerKind === 'quiet' || bannerKind === 'mic-hint') hideBanner();
     keepScreenAwake(false);
+    setLost(false);
     setStatus('off');
+    setHeardVisible(false);
     updateMicButton();
   }
 
@@ -1046,39 +1249,55 @@ Happy reading!`;
     micIcon.innerHTML = wantListening ? PAUSE_ICON : MIC_ICON;
   }
 
+  let statusKind = 'off';
   function setStatus(kind) {
+    statusKind = kind;
     const labels = {
       off: 'Not listening', starting: 'Starting…', listening: 'Listening',
-      done: 'Finished', error: 'Stopped', unsupported: 'Not supported'
+      lost: 'Lost you – read a phrase or click a word',
+      reconnecting: 'Reconnecting…', done: 'Finished', error: 'Stopped', unsupported: 'Not supported'
     };
-    dot.className = 'dot ' + (kind === 'unsupported' ? 'error' : kind);
-    statusText.textContent = labels[kind];
+    const shown = kind === 'listening' && lost ? 'lost' : kind;
+    dot.className = 'dot ' + (shown === 'unsupported' ? 'error' : shown);
+    statusText.textContent = labels[shown];
+  }
+
+  function setHeardVisible(on) {
+    heard.hidden = !on;
+    document.body.classList.toggle('has-heard', on);
   }
 
   function showHeard(interim) {
     if (!settings.showHeard || (!heardLog.length && !interim.length)) {
-      heard.hidden = true;
+      setHeardVisible(false);
       return;
     }
-    heard.hidden = false;
-    heard.textContent = '';
-    const finalPart = document.createElement('span');
-    finalPart.textContent = heardLog.slice(-16).join(' ') + ' ';
+    // One isolated left-to-right run, so the newest words sit at the right and the
+    // container's right-to-left overflow trims the oldest words first.
+    const line = document.createElement('span');
+    line.textContent = heardLog.slice(-16).join(' ') + ' ';
     const interimPart = document.createElement('span');
     interimPart.className = 'interim';
     interimPart.textContent = interim.join(' ');
-    heard.append(finalPart, interimPart);
+    line.append(interimPart);
+    heard.replaceChildren(line);
+    setHeardVisible(true);
   }
 
   // ---------------------------------------------------------------------------
   // Banner
   // ---------------------------------------------------------------------------
-  function showBanner(msg, info = false) {
+  let bannerKind = '';   // lets temporary hints (e.g. 'quiet') clear themselves when no longer true
+  function showBanner(msg, info = false, kind = 'message') {
     bannerText.textContent = msg;
     banner.classList.toggle('info', info);
     banner.hidden = false;
+    bannerKind = kind;
   }
-  function hideBanner() { banner.hidden = true; }
+  function hideBanner() {
+    banner.hidden = true;
+    bannerKind = '';
+  }
   $('bannerClose').addEventListener('click', hideBanner);
 
   // ---------------------------------------------------------------------------
@@ -1096,7 +1315,7 @@ Happy reading!`;
     root.style.setProperty('--measure', settings.width + 'ch');
     if (settings.theme === 'auto') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', settings.theme);
-    if (!settings.showHeard) heard.hidden = true;
+    if (!settings.showHeard) setHeardVisible(false);
     for (const [key, c] of Object.entries(controls)) {
       c.el.value = settings[key];
       c.out.textContent = c.fmt(settings[key]);
@@ -1141,40 +1360,81 @@ Happy reading!`;
   // ---------------------------------------------------------------------------
   // Editing text
   // ---------------------------------------------------------------------------
+  let draft = null;          // unapplied edits, kept if the dialog is closed by accident
+  let replacedWhole = false; // "Load sample" / "Open file" start from the top
+
   function openEditor() {
-    editor.value = text;
+    editor.value = draft !== null ? draft : text;
+    replacedWhole = false;
     editDlg.showModal();
     editor.focus();
   }
+  editDlg.addEventListener('close', () => {
+    if (!editDlg.returnValue) draft = editor.value !== text ? editor.value : null;
+    editDlg.returnValue = '';
+  });
+
+  // After an edit, find the last few words read in the new text so a typo fix doesn't lose your place.
+  function placeAfterEdit(oldWords, oldPos) {
+    const n = Math.min(4, oldPos);
+    if (!n) return 0;
+    const phrase = oldWords.slice(oldPos - n, oldPos).map((w) => w.n);
+    for (let d = 0; d <= words.length; d++) {
+      for (const s of d ? [oldPos - n - d, oldPos - n + d] : [oldPos - n]) {
+        if (s >= 0 && s + n <= words.length && phrase.every((w, t) => words[s + t].n === w)) return s + n;
+      }
+    }
+    return Math.min(oldPos, words.length);
+  }
 
   $('applyBtn').addEventListener('click', () => {
-    stopListening();
+    draft = null;
+    editDlg.close('applied');
+    if (editor.value === text) return;
+    const oldWords = words;
+    const oldPos = pos;
     text = editor.value;
     pos = 0;
     recent = [];
     misses = 0;
+    setLost(false);
     heardLog = [];
-    heard.hidden = true;
+    setHeardVisible(false);
     render();
-    editDlg.close();
     layout();
+    setPos(replacedWhole ? 0 : placeAfterEdit(oldWords, oldPos), true);
     scrollToCurrent(true);
-    saveSoon();
   });
-  $('sampleBtn').addEventListener('click', () => { editor.value = SAMPLE; });
+  $('cancelBtn').addEventListener('click', () => {
+    draft = null;
+    editDlg.close('cancelled');
+  });
+  $('sampleBtn').addEventListener('click', () => {
+    editor.value = SAMPLE;
+    replacedWhole = true;
+  });
   $('openFileBtn').addEventListener('click', () => $('fileInput').click());
   $('fileInput').addEventListener('change', async (e) => {
     const file = e.target.files[0];
-    if (file) editor.value = await file.text();
+    if (file) {
+      editor.value = await file.text();
+      replacedWhole = true;
+    }
     e.target.value = '';
   });
 
   for (const btn of document.querySelectorAll('[data-close]')) {
     btn.addEventListener('click', () => btn.closest('dialog').close());
   }
-  // Click on the backdrop closes a dialog.
+  // A click on the backdrop closes a dialog, but not the end of a text selection or
+  // resize drag that started inside it and was released outside.
   for (const dlg of [editDlg, settingsDlg]) {
-    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    let downOnBackdrop = false;
+    dlg.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg; });
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg && downOnBackdrop) dlg.close();
+      downOnBackdrop = false;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -1237,12 +1497,20 @@ Happy reading!`;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (document.querySelector('dialog[open]')) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    // Let Space/Enter press a button that was reached with Tab.
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button, a')) return;
+    if (e.key === ' ' && e.repeat) return e.preventDefault();
     const actions = {
       ' ': toggleListening,
       ArrowRight: () => stepWord(1),
       ArrowLeft: () => stepWord(-1),
       ArrowDown: () => stepLine(1),
       ArrowUp: () => stepLine(-1),
+      // Presentation clickers send PageDown/PageUp, and "b" or "." for their blank-screen button.
+      PageDown: () => stepLine(1),
+      PageUp: () => stepLine(-1),
+      b: toggleListening,
+      '.': toggleListening,
       Home: () => setPos(0, true),
       '+': () => changeFontSize(4),
       '=': () => changeFontSize(4),
@@ -1272,6 +1540,12 @@ Happy reading!`;
   // ---------------------------------------------------------------------------
   render();
   applySettings();
+
+  if (DEBUG) {
+    debugBtn.hidden = false;
+    debugBtn.addEventListener('click', downloadLog);
+    showBanner('Debug mode: read for a minute or two as normal, then press "Download session log" and share the file.', true);
+  }
 
   if (!SR) {
     micBtn.disabled = true;
