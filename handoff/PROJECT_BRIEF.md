@@ -57,8 +57,8 @@ After `LOST_AFTER = 8` misses in a row, the "Lost you" state shows: amber dot an
 
 ## 4. Decisions already made (don't undo these without a reason)
 
-- **Jumping ahead is worse than lagging.** The context rules above were tightened on purpose. They cut large wrong jumps
-  roughly in half or better in simulation. Don't loosen them.
+- **Jumping ahead is worse than lagging.** The context rules above were tightened on purpose. In simulation they cut large wrong jumps
+  (8+ words ahead) by between about a third and nearly all, depending on how noisy the speech was. Don't loosen them.
 - **Only a final result finishes the script.** An interim guess at the last word doesn't end it early.
 - **One network error only shows "Reconnecting…".** Only repeated failures stop listening.
 - **Applying an edit keeps the microphone on and keeps your place.** "Load sample" and "Open file" start from the top.
