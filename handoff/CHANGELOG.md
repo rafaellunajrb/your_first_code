@@ -1,0 +1,13 @@
+# Changelog
+
+Add one line per change, newest at the bottom: `vX.Y (date): what changed`.
+
+- **v0.1:** first prototype. It scrolled at a fixed speed while you were talking.
+- **v0.2:** rewrite. It follows the reader word by word. Added paste or open your own text, a full-screen reader, settings, keyboard shortcuts, click to set your place, saved text and settings, and error messages.
+- **v0.3:** keeps the screen awake while listening, follows you when you re-read, and adds a "Back to my place" button after a manual scroll.
+- **v1.0 (Oct 2026):** tracking reliability and feedback, from a reviewed audit:
+  - **Tracking:** stricter jump-ahead rules, and only a final result finishes the script.
+  - **Feedback:** a "Lost you" state, a warning when nothing is heard, and an honest "Listening" status. The "heard" strip is fixed.
+  - **Reliability:** retries after network errors and restarts faster.
+  - **Editor:** keeps drafts and your place after an edit, and headings render correctly.
+  - **Other:** clicker keys (PgUp/PgDn/B), a `?debug` session log, the browser's own language by default, a microphone and privacy hint, and automated tests (`tests/`).
