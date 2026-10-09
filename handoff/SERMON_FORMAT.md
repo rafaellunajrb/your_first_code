@@ -1,7 +1,7 @@
 # Sermon text format for Speech Scroll
 
 Sermon Bridge should export each English sermon as a **plain text file** (`.txt`, UTF-8) in this format.
-Open it in Speech Scroll with **Edit text → Open .txt file**.
+Add it to Speech Scroll with **Sermons → Add from .txt file** (you can pick several files at once).
 
 ## The format
 

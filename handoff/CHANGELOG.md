@@ -19,3 +19,9 @@ Add one line per change, newest at the bottom: `vX.Y (date): what changed`.
   - **Time display:** elapsed time and time left, from your own pace.
   - **Debug log** long enough for a full sermon.
   - **Groundwork:** a version shown in Settings, all tracking settings in one place, versioned saved data, `npm test`, automatic tests on GitHub, and a replay tool for real logs.
+- **v1.2.0 (Oct 2026):**
+  - **Sermon library (O):** keep many sermons, each remembering your place. Add from .txt files (several at once) or by pasting, open, delete. Older saved text moves in automatically.
+  - **Microphone check (M):** a level meter, which microphone is in use, what Chrome heard, and a clear verdict.
+  - **Countdown:** in camera mode, a 3-2-1 countdown (configurable) before listening starts.
+  - **Tidier toolbar:** icon-only buttons on narrower screens.
+  - **Housekeeping:** the app now lives on `master` in the `speech-scroll` repository.

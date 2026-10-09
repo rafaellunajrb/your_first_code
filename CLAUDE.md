@@ -13,7 +13,7 @@ who records English translations of Korean sermons on a laptop webcam for YouTub
 - Saved data shape changes: bump `SCHEMA` and add a step to `migrate()`.
 
 ## Commands
-- `npm install` (once), then `npm test`: replay scenarios plus 65 feature checks in headless Chromium (under a minute).
+- `npm install` (once), then `npm test`: replay scenarios plus 90 feature checks in headless Chromium (under a minute).
   In the Claude Code cloud sandbox, Playwright is global: `NODE_PATH=$(npm root -g) npm test`.
   `PW_CHANNEL=chrome npm test` uses an installed Google Chrome instead of Playwright's Chromium (GitHub does this).
 - `npm run replay -- path/to/log.json [--trace]`: compares a real session against the current code.
@@ -24,4 +24,5 @@ who records English translations of Korean sermons on a laptop webcam for YouTub
 2. Add a line to `handoff/CHANGELOG.md`, and update `handoff/PROJECT_BRIEF.md` (architecture, decisions or roadmap) if they changed.
    Update `handoff/TEST_CHECKLIST.md` for new user-visible features.
 3. Run `npm test`, then `npm run package`.
-4. GitHub Pages serves the branch the owner selected in the repository settings (see `handoff/START_HERE.md`).
+4. Work lands on `master` (by pull request). GitHub Pages serves `master` at https://rafaellunajrb.github.io/speech-scroll/.
+   The owner also uploads chat-made versions straight to `master` through GitHub's website.

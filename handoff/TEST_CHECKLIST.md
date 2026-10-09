@@ -1,4 +1,4 @@
-# Test checklist (about 15 minutes, in Chrome)
+# Test checklist (about 20 minutes, in Chrome)
 
 Run this after **every** change, as well as the task's own test steps. If anything fails, tell the chat which step,
 what you expected and what you saw. Keep your previous working version until everything passes.
@@ -35,7 +35,7 @@ Press **Edit text → Load sample → Use this text**, then **Restart**.
     Pressing Space does nothing, and **Restart** goes back to the top.
 
 ## C2. Sermon features
-17. **Open `sample-sermon.txt`** (Edit text → Open .txt file → Use this text). The title is large, sections are headings,
+17. **Add `sample-sermon.txt`** (Sermons → Add from .txt file). The title is large, sections are headings,
     the scripture is an indented block, and `[notes]` are small and faded.
 18. **Read past a note without saying it.** Tracking carries on as normal.
 19. **Sections:** press **Sections** and pick one: the highlight jumps there. Press `]` and `[` to move between sections.
@@ -46,10 +46,18 @@ Press **Edit text → Load sample → Use this text**, then **Restart**.
     - Moving the mouse brings the toolbar back for 3 seconds, but **PgDn does not**.
     - Pause brings the controls back, and **C** again returns to the normal layout.
 
+## C3. Library, microphone check and countdown
+22. **Sermons:** press **O**. Both sermons are listed with words, length and progress. Open the other one, and it's at the place you left it.
+    Switch back, and your place there is kept too. Add the same file again: it opens the existing one instead of a copy.
+23. **Paste a new sermon** from the Sermons list, then **Delete** it (confirm). The list and the open sermon update.
+24. **Microphone check:** press **M**, then **Start check**, and read the passage. The level bar moves, the microphone's name shows,
+    and you get a verdict. Try mumbling once to see a "missed words" verdict.
+25. **Countdown:** in camera mode, press Start. 3-2-1 shows, then listening starts. Press Start again during the countdown to cancel it.
+
 ## D. Debug log
-22. **Open the file with `?debug` at the end of the address.** A "Download session log" button appears.
+26. **Open the file with `?debug` at the end of the address.** A "Download session log" button appears.
     Read a sentence, press it, and a `.json` file downloads. Hovering over the button shows how many events it has recorded.
 
 ## E. Whatever the task changed
-23. **Do the chat's own numbered test steps.**
-24. **Check the task's feature in both light and dark theme**, and in a narrow window (drag the window narrow).
+27. **Do the chat's own numbered test steps.**
+28. **Check the task's feature in both light and dark theme**, and in a narrow window (drag the window narrow).

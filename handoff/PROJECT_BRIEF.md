@@ -16,7 +16,7 @@
   - The text is on the same screen, just below the webcam.
   - The microphone is the webcam's or laptop's built-in one.
 - **Sermons last 45–90 minutes**, about 6,000–13,000 words.
-- **Two ways to run it:** opened locally (`file://`), or from GitHub Pages at <https://rafaellunajrb.github.io/your_first_code/> (branch `claude/speech-scroll-app-011CULQHxHxv7szv6fpvyDoF`, root folder),
+- **Two ways to run it:** opened locally (`file://`), or from GitHub Pages at <https://rafaellunajrb.github.io/speech-scroll/> (repository `rafaellunajrb/speech-scroll`, branch `master`, root folder),
   installed from Chrome as an app with its own window.
 
 ## 2. Hard constraints
@@ -37,7 +37,7 @@ Search for these names; line numbers drift.
 
 | Section | Key items |
 |---|---|
-| Config & storage | `APP_VERSION` (shown in Settings and in logs). `TUNING`: every tracking and timing knob in one object (lookahead, relocate ranges, `LOST_AFTER`, `FOLLOW_PAUSE`, `QUIET_WARN`, `MAX_NET_RETRIES`, `DEFAULT_WPM`, `PACE_WINDOW`, `PEEK_TIME`). `STORE_KEY = 'speechScroll.v2'`, which holds `{schema, text, settings, pos, seenMicHint}`. `SCHEMA` + `migrate()` upgrade older saved data. `DEFAULTS` + `RANGES` + `cleanSettings()` validate settings. `browserLang()`, `SAMPLE`, `saveSoon()` |
+| Config & storage | `APP_VERSION` (shown in Settings and in logs). `TUNING`: every tracking and timing knob in one object (lookahead, relocate ranges, `LOST_AFTER`, `FOLLOW_PAUSE`, `QUIET_WARN`, `MAX_NET_RETRIES`, `DEFAULT_WPM`, `PACE_WINDOW`, `PEEK_TIME`). `STORE_KEY = 'speechScroll.v2'` holds `{schema: 3, settings, seenMicHint, currentId, sermons: [{id, title, words, added, opened, pos, fileName?}]}`. Each sermon's text is stored separately under `TEXT_KEY + id`, so saving your place never rewrites every text (browser storage is about 5 MB, roughly 70 sermons). `SCHEMA` + `migrate()` upgrade older saved data (2→3 turns the old single text into the first sermon). `restoreLibrary()` also removes orphaned texts. `saveIndex()`/`saveSoon()` save the index, and `writeText()` reports a full storage. `DEFAULTS` + `RANGES` + `cleanSettings()` validate settings. `browserLang()`, `SAMPLE`, `saveSoon()` |
 | Debug session log | `DEBUG` (URL has `?debug`), `logEvent(type, data)`, `downloadLog()`. Holds up to 60,000 events, enough for a 90-minute sermon. Identical repeated results are skipped. Each `result` event stores Chrome's results from `resultIndex` onward and the position **after** processing. Also start/audiostart/end/error/jump/lost/quiet. The file includes the version, settings and text. In debug mode, `window.speechScroll` gives tools read-only access (`pos`, `jumpTo`, `context`) |
 | Word normalisation | `normWords(s)`: lowercase, strip accents and apostrophes, `1,000→1000`, split on non-letters/digits, map number words to digits (`NUMBERS`) and a few homophones (`SAME_SOUND`). `similar(a,b)`: exact match, or a prefix/Levenshtein match for words of 4+ letters |
 | Rendering | `parseBlocks()` reads the sermon format: `# ` = `<h1>` title, `## `+ = `<h2>` section, consecutive `> ` lines = `<blockquote>`, blank line = new `<p>`. `render()` builds spans, `appendLine()` splits `[notes]` out (a note can continue across lines but stops at the end of its block), and notes become `<span class="note">`, never words. `spans[s] = {el, first}` (`first` = index into `words`, or -1). `words[i] = {n, span}` holds normalised words for matching. `sections[] = {title, level, span}` |
@@ -48,13 +48,16 @@ Search for these names; line numbers drift.
 | Time & pace | Elapsed time counts only while listening (`startClock`/`stopClock`/`resetClock`, which Restart and Home reset). `notePace()` samples `{t, pos}` on voice advances, and a manual jump restarts measuring. `pace()` = words per minute over the last `PACE_WINDOW`, falling back to `DEFAULT_WPM`. `tickClock()` updates the toolbar clock ("12:34 · about 31 min left", with the pace in its tooltip) and the camera-mode corner clock |
 | Status & banner | `setStatus(kind)`: off, starting, listening, lost, reconnecting, done, error, unsupported. `showBanner(msg, info, kind)` |
 | Settings | Camera mode (and its corner clock), font size, column width, reading line (these two edit the camera-mode values while it's on), language, theme, heard strip, and the version number |
+| Sermon library | `#libraryBtn` / O opens `#libraryDlg`: the most recently opened first, with words, estimated length, % read and the date opened. `openSermon(id)` saves your place and switches. `addAndOpen(text, fileName)` reopens an identical existing text instead of duplicating it. `deleteSermon(id)` asks first. Edit text edits the open sermon, and "Paste a new sermon" uses `openEditor('new')` |
+| Countdown | `beginReading()`: in camera mode, `settings.countdownSecs` (0/3/5/10, default 3) counts down before `startListening()`. Space, the mic button or Escape cancels |
+| Microphone check | `#micDlg` / M: the reader reads `CHECK_TEXT` (with a Bible reference). It shows the level meter (getUserMedia + AnalyserNode), the microphone name, what Chrome heard, and a verdict (good, warn or bad) with the words it missed. Each check has its own recognizer, and late events from an older check are ignored (`endMicCheck(report, error, c)`). The result is logged as a `miccheck` debug event |
 | Sections menu | `#sectionsBtn` (hidden without `##` sections) opens `#sectionsMenu`: title plus sections, the current one marked, arrow keys, Escape. `stepSection(±1)` for `[` / `]` |
 | Editing | Dialog with textarea. Open .txt, Load sample. Unapplied drafts are kept. `placeAfterEdit()` keeps your place after an edit |
 | Navigation | Click a word. ←/→ word, ↑/↓ and PgUp/PgDn line, `[`/`]` section, Home restart (resets the clock), C camera mode, +/- text size, F full screen, E edit, S settings, Space/B/"." start or pause |
 
 ### Tools and tests (only usable with Claude Code or Node.js, not in a chat)
 
-- `npm test` runs `tests/regression.js` (transcript replays in `tests/scenarios.json`) and `tests/features.js` (65 checks).
+- `npm test` runs `tests/regression.js` (transcript replays in `tests/scenarios.json`) and `tests/features.js` (90 checks).
   Both use a fake recognizer in headless Chromium. GitHub runs them automatically on every push (`.github/workflows/tests.yml`).
 - `npm run replay -- log.json` (`tests/replay-log.js`) replays a real `?debug` log through the current code and lists every
   moment where the position now differs from the live session. Use it before and after any tracking change.
@@ -93,7 +96,7 @@ After `LOST_AFTER = 8` misses in a row, the "Lost you" state shows: amber dot an
 
 ## 6. Roadmap (details and prompts in CHAT_PLAN.md)
 
-**Done in v1.1.0:** camera mode, the sermon text format, the section list, the time display, and a debug log long enough for a full sermon.
+**Done:** camera mode, the sermon text format, the section list, the time display and full-length debug logs (v1.1.0), plus the sermon library, the microphone check and the camera-mode countdown (v1.2.0).
 
 1. **Real read-through with `?debug`** (Step R in CHAT_PLAN.md), then **tune from the real logs**,
    including protection against repeated lines.
@@ -102,7 +105,7 @@ After `LOST_AFTER = 8` misses in a row, the "Lost you" state shows: amber dot an
    - **An on-device recognition mode with vocabulary biasing.** Chrome's `processLocally` mode, plus `recognition.phrases` to bias it toward words from the script. Per research in October 2026, both are shipped in desktop Chrome, but biasing works only on-device. Check current Chrome docs before relying on this.
    - **A microphone level meter.**
    - **"Commit + replay" interim handling.** Restore the state saved at the last final result, then replay the current interim words on every event. That way, revised interim guesses can't leave stale jumps. It helped in simulation, but needs real logs to justify it.
-   - **Ideas for later:** a countdown before listening starts, a target-length warning, multiple saved sermons, and a mirror mode (only for teleprompter glass).
+   - **Ideas for later:** a target-length warning, choosing the microphone inside the app (`recognition.start(track)`), export and import of the sermon library, and a mirror mode (only for teleprompter glass).
 
 ## 7. Working rules for the assistant
 

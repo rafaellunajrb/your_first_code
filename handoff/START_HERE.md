@@ -51,25 +51,25 @@ Chrome also remembers the microphone permission. Your sermons and settings stay 
 Only the app's code is on the web.
 
 **One-time setup (2 minutes, on github.com):**
-1. **Open the repository settings:** go to <https://github.com/rafaellunajrb/your_first_code/settings/pages>.
+1. **Open the repository settings:** go to <https://github.com/rafaellunajrb/speech-scroll/settings/pages>.
 2. **Choose the source:** under **Build and deployment → Source**, choose **Deploy from a branch**.
-3. **Choose the branch:** under **Branch**, pick `claude/speech-scroll-app-011CULQHxHxv7szv6fpvyDoF` and the folder **/ (root)**, then press **Save**.
-4. **Wait for it to go live:** after a minute or two the page shows "Your site is live at https://rafaellunajrb.github.io/your_first_code/".
+3. **Choose the branch:** under **Branch**, pick `master` and the folder **/ (root)**, then press **Save**.
+   If you set it up earlier with the long `claude/…` branch, switch it to `master` the same way.
+4. **Wait for it to go live:** after a minute or two the page shows "Your site is live at https://rafaellunajrb.github.io/speech-scroll/".
 
 **Install it (on the laptop you record with):**
-1. **Open the app's address:** go to <https://rafaellunajrb.github.io/your_first_code/> in Chrome. It opens Speech Scroll.
+1. **Open the app's address:** go to <https://rafaellunajrb.github.io/speech-scroll/> in Chrome. It opens Speech Scroll.
 2. **Install it:** press the **Install app** button in the toolbar, or use the install icon at the right of Chrome's address bar.
    You can also use Chrome's menu → **Cast, save and share → Install page as app**.
 3. **Open it like any program:** Speech Scroll now opens from your desktop, Start menu or Dock in its own window.
 4. **Load your text again:** the web version has its own saved text and settings, separate from the local file.
-   Load your sermon once with **Edit text → Open .txt file**.
+   Add your sermons once with **Sermons → Add from .txt file**.
 
 **Publish a new version after a chat:**
-1. **Open the repository on GitHub:** go to <https://github.com/rafaellunajrb/your_first_code>.
-2. **Switch to the branch:** use the branch menu (top left) to switch to `claude/speech-scroll-app-011CULQHxHxv7szv6fpvyDoF`.
-3. **Upload the new file:** choose **Add file → Upload files**, drop in the new `speech-scroll-app.html`, keep the same name,
-   and choose **Commit directly to the `claude/speech-scroll-app-011CULQHxHxv7szv6fpvyDoF` branch**.
-4. **Reload the app:** after 1–2 minutes, reload the installed app with Ctrl+R (Cmd+R on a Mac).
+1. **Open the repository on GitHub:** go to <https://github.com/rafaellunajrb/speech-scroll>.
+2. **Upload the new file:** choose **Add file → Upload files**, drop in the new `speech-scroll-app.html`, keep the same name,
+   and choose **Commit directly to the `master` branch**.
+3. **Reload the app:** after 1–2 minutes, reload the installed app with Ctrl+R (Cmd+R on a Mac).
    It can take up to 10 minutes for the change to appear.
 
 **Automatic check:** after each upload, GitHub runs the app's automated tests by itself (about 3 minutes).
@@ -80,6 +80,7 @@ If a new version breaks something, upload your previous saved version the same w
 
 ## Where things stand
 
-Version 1.1.0 has the sermon features: camera mode, the sermon text format, sections, the time display, and full-length debug logs.
+Version 1.2.0 has camera mode, the sermon text format, sections, the time display, full-length debug logs,
+a **sermon library**, a **microphone check** (M) and a **countdown** before reading in camera mode.
 **It has not yet been tested with a real voice.** **Step R** in `CHAT_PLAN.md` is a real read-through with the recording log on,
 and **Chat 1** uses that log to tune the tracking for preaching.

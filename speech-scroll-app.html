@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Speech Scroll v1.1.0 (voice-following teleprompter); the version also lives in APP_VERSION. Project brief and change plan: handoff/ folder. -->
+<!-- Speech Scroll v1.2.0 (voice-following teleprompter); the version also lives in APP_VERSION. Project brief and change plan: handoff/ folder. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -146,10 +146,13 @@
     color: var(--subtle);
     margin-left: 4px;
     white-space: nowrap;
-    min-width: 0;
+    flex: none; /* the status matters more than the clock when space is short */
   }
   .status-text { overflow: hidden; text-overflow: ellipsis; }
   .clock {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     margin-left: 8px;
     font-size: 14px;
     color: var(--subtle);
@@ -191,6 +194,66 @@
   .menu button.title { font-weight: 600; }
   .menu button.section { padding-left: 22px; }
   .menu button[aria-current="true"] { color: var(--accent); font-weight: 600; }
+
+  /* ---------- Sermon library ---------- */
+  .library { list-style: none; margin: 0; padding: 0; max-height: 55vh; overflow-y: auto; }
+  .library li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .library .open {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .library .open:hover, .library .open:focus-visible { background: var(--hover); outline: none; }
+  .library .name { display: block; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .library .meta { display: block; font-size: 13px; color: var(--subtle); margin-top: 2px; }
+  .library li.current .name::after { content: " · open now"; font-weight: 400; color: var(--accent); }
+  .library .delete { flex: none; }
+
+  /* ---------- Microphone check ---------- */
+  .mic-step { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
+  .mic-sentence {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-left: 4px solid var(--quote-edge);
+    background: var(--quote-bg);
+    font: 20px/1.45 Georgia, "Times New Roman", serif;
+  }
+  .meter { height: 10px; border-radius: 5px; background: var(--hover); overflow: hidden; }
+  .meter-fill { height: 100%; width: 0; background: var(--ok); transition: width 0.08s linear; }
+  .mic-heard { min-height: 1.4em; margin: 12px 0 4px; font-size: 14px; color: var(--subtle); font-style: italic; }
+  .mic-verdict { min-height: 1.4em; margin: 4px 0 0; font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .mic-verdict.good { color: var(--ok); }
+  .mic-verdict.warn { color: var(--warn); }
+  .mic-verdict.bad { color: var(--danger); }
+
+  /* ---------- Countdown ---------- */
+  .countdown {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    color: var(--accent);
+    font-size: 30vh;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
 
   /* ---------- Camera mode: while reading, only the text (toolbar returns on mouse move) ---------- */
   body.camera.listening #reader { top: 0; }
@@ -440,13 +503,23 @@
     text-align: center;
   }
 
+  /* Narrower screens: buttons become icon-only, least-used first (their names stay in the tooltip). */
+  @media (max-width: 1440px) {
+    #installBtn .label, #debugBtn .label, #restartBtn .label, #settingsBtn .label, #fullBtn .label { display: none; }
+    #installBtn, #debugBtn, #restartBtn, #settingsBtn, #fullBtn { padding: 0 9px; }
+  }
+  @media (max-width: 1000px) {
+    #sectionsBtn .label, #editBtn .label, #libraryBtn .label { display: none; }
+    #sectionsBtn, #editBtn, #libraryBtn { padding: 0 9px; }
+  }
+
   @media (max-width: 720px) {
-    .toolbar { gap: 6px; }
+    .toolbar { gap: 6px; overflow-x: auto; }
     .btn .label { display: none; }
     .btn.primary .label { display: inline; }
     .btn { padding: 0 9px; }
     .status .status-text { display: none; }
-    .clock-left { display: none; }
+    .clock { display: none; }
     .field { grid-template-columns: 1fr 48px; }
     .field label { grid-column: 1 / 3; }
     .field select { grid-column: 1 / 3; }
@@ -483,7 +556,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
     <span class="label">Restart</span>
   </button>
-  <button id="editBtn" class="btn" title="Paste or open your own text (E)">
+  <button id="libraryBtn" class="btn" title="Your sermons: open, add or delete (O)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2zM8 7h6"/><path d="M4 19a2 2 0 0 0 2 2h12v-2"/></svg>
+    <span class="label">Sermons</span>
+  </button>
+  <button id="editBtn" class="btn" title="Edit the text of this sermon (E)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
     <span class="label">Edit text</span>
   </button>
@@ -515,7 +592,7 @@
 <!-- Edit text -->
 <dialog id="editDlg">
   <div class="dlg-head">
-    <h2>Your text</h2>
+    <h2 id="editTitle">Edit this sermon</h2>
     <button class="close-x" data-close aria-label="Close">&times;</button>
   </div>
   <div class="dlg-body">
@@ -531,6 +608,48 @@
     <button id="applyBtn" class="btn primary">Use this text</button>
   </div>
 </dialog>
+
+<!-- Sermon library -->
+<dialog id="libraryDlg">
+  <div class="dlg-head">
+    <h2>Your sermons</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <ul id="libraryList" class="library"></ul>
+    <p class="hint" id="libraryHint">Each sermon remembers where you got to. Sermons are kept in this browser only.</p>
+  </div>
+  <div class="dlg-foot">
+    <button id="addFileBtn" class="btn primary">Add from .txt file</button>
+    <button id="addPasteBtn" class="btn">Paste a new sermon</button>
+    <input id="addFileInput" type="file" accept=".txt,.md,text/plain" multiple hidden>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Close</button>
+  </div>
+</dialog>
+
+<!-- Microphone check -->
+<dialog id="micDlg">
+  <div class="dlg-head">
+    <h2>Microphone check</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <p class="mic-step">Sit where you'll record, press <strong>Start check</strong>, then read this aloud at your normal preaching voice:</p>
+    <p id="micSentence" class="mic-sentence"></p>
+    <div class="meter" aria-hidden="true"><div id="micLevel" class="meter-fill"></div></div>
+    <p id="micDevice" class="hint"></p>
+    <p id="micHeard" class="mic-heard" aria-live="polite"></p>
+    <p id="micVerdict" class="mic-verdict" aria-live="polite"></p>
+  </div>
+  <div class="dlg-foot">
+    <button id="micStartBtn" class="btn primary">Start check</button>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Done</button>
+  </div>
+</dialog>
+
+<div id="countdown" class="countdown" aria-live="assertive" hidden></div>
 
 <!-- Settings -->
 <dialog id="settingsDlg">
@@ -592,6 +711,16 @@
       <input id="cameraClock" type="checkbox">
       <label for="cameraClock">Show a small clock in the corner in camera mode</label>
     </div>
+    <div class="field">
+      <label for="countdownSecs">Countdown before reading (camera mode)</label>
+      <select id="countdownSecs">
+        <option value="0">None</option>
+        <option value="3">3 seconds</option>
+        <option value="5">5 seconds</option>
+        <option value="10">10 seconds</option>
+      </select>
+    </div>
+    <p><button id="micCheckBtn" class="btn" type="button">Check microphone (M)</button></p>
 
     <h3>Keyboard shortcuts</h3>
     <table class="keys">
@@ -605,7 +734,10 @@
       <tr><td><kbd>C</kbd></td><td>Camera mode on or off</td></tr>
       <tr><td><kbd>+</kbd> <kbd>&minus;</kbd></td><td>Bigger or smaller text</td></tr>
       <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
+      <tr><td><kbd>O</kbd></td><td>Your sermons (open, add, delete)</td></tr>
       <tr><td><kbd>E</kbd> / <kbd>S</kbd></td><td>Edit text / Settings</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Microphone check</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Cancel the countdown</td></tr>
       <tr><td>Click a word</td><td>Move your place to that word</td></tr>
     </table>
     <p class="hint">Privacy: Chrome's speech recognition sends your audio to Google's speech service, so it needs an internet connection. Your text and settings stay in this browser. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
@@ -621,13 +753,14 @@
   // Sections of this script, in order (search for the banner comments):
   //   Config & storage · Debug session log · DOM · Word normalisation & fuzzy matching ·
   //   Rendering the text · Position tracking · Scrolling · Camera mode · Speech recognition ·
-  //   Time & pace · Banner · Settings · Sections menu · Editing text · Navigation · Start up
+  //   Time & pace · Banner · Settings · Sections menu · Sermon library · Countdown ·
+  //   Microphone check · Editing text · Navigation · Start up
   // Project brief, decisions and roadmap: handoff/PROJECT_BRIEF.md. Tests: tests/ (npm test).
 
   // ---------------------------------------------------------------------------
   // Config & storage
   // ---------------------------------------------------------------------------
-  const APP_VERSION = '1.1.0';  // bump on every release; shown in Settings and in debug logs
+  const APP_VERSION = '1.2.0';  // bump on every release; shown in Settings and in debug logs
 
   // Tracking and timing knobs, in one place. Change these only with evidence from real
   // ?debug logs (see tests/replay-log.js), and re-run the tests afterwards.
@@ -645,13 +778,16 @@
   };
   const { LOOKAHEAD, RELOCATE_RANGE, REREAD_RANGE, LOST_AFTER, FOLLOW_PAUSE, QUIET_WARN, MAX_NET_RETRIES } = TUNING;
 
-  // Saved data lives in localStorage under STORE_KEY as { schema, text, settings, pos, seenMicHint }.
+  // Saved data lives in localStorage:
+  //   STORE_KEY      { schema, settings, seenMicHint, currentId, sermons: [{ id, title, words, added, opened, pos }] }
+  //   TEXT_KEY + id  the text of one sermon (kept separate, so saving your place doesn't rewrite every sermon)
   // To change its shape later: bump SCHEMA and add a step to migrate() that upgrades older data.
   const STORE_KEY = 'speechScroll.v2';
-  const SCHEMA = 2;
+  const TEXT_KEY = 'speechScroll.text.';
+  const SCHEMA = 3;
   const DEFAULTS = {
     fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true,
-    cameraMode: false, cameraWidth: 26, cameraLinePos: 14, cameraClock: true
+    cameraMode: false, cameraWidth: 26, cameraLinePos: 14, cameraClock: true, countdownSecs: 3
   };
 
   const SAMPLE = `# Welcome to Speech Scroll
@@ -702,6 +838,14 @@ Happy reading!`;
     if (version < 2) {
       // v1.1.0 only added settings; cleanSettings() fills in their defaults. Nothing to move.
     }
+    if (version < 3) {
+      // v1.2.0: one text became a library of sermons. The old text becomes the first sermon
+      // (stored by restoreLibrary(), once the helpers below exist).
+      data.sermons = [];
+      data.legacy = typeof data.text === 'string' ? { text: data.text, pos: data.pos } : null;
+      delete data.text;
+      delete data.pos;
+    }
     // Add later steps here, oldest first, e.g.
     //   if (version < 3) data.settings.newName = data.settings.oldName;
     return data;
@@ -718,6 +862,7 @@ Happy reading!`;
     }
     if (!LANGS.includes(out.lang)) out.lang = browserLang();
     if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
+    if (![0, 3, 5, 10].includes(out.countdownSecs)) out.countdownSecs = DEFAULTS.countdownSecs;
     return out;
   }
 
@@ -738,19 +883,83 @@ Happy reading!`;
 
   const stored = loadStore();
   const settings = cleanSettings(stored.settings);
-  let text = typeof stored.text === 'string' ? stored.text : SAMPLE;
-  let pos = Number.isInteger(stored.pos) && stored.pos >= 0 ? stored.pos : 0;
   let seenMicHint = stored.seenMicHint === true;
+
+  // --- Sermon library storage ---
+  const validEntry = (e) => e && typeof e.id === 'string' && typeof e.title === 'string';
+  let sermons = Array.isArray(stored.sermons) ? stored.sermons.filter(validEntry) : [];
+  let currentId = typeof stored.currentId === 'string' ? stored.currentId : null;
+  let storageFull = false;
+
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // "# Title" line, else the first line, shortened.
+  function titleOf(source) {
+    const lines = source.split('\n').map((l) => l.trim()).filter(Boolean);
+    const heading = lines.find((l) => /^#\s+/.test(l));
+    const title = (heading ? heading.replace(/^#\s+/, '') : lines[0] || 'Untitled').replace(/\[[^\]]*\]?/g, '').trim();
+    return title.length > 70 ? title.slice(0, 67) + '…' : title || 'Untitled';
+  }
+
+  function readText(id) {
+    try { return localStorage.getItem(TEXT_KEY + id); } catch (e) { return null; }
+  }
+
+  // Returns false (and says so) when the browser's storage for this page is full.
+  function writeText(id, source) {
+    try {
+      localStorage.setItem(TEXT_KEY + id, source);
+      storageFull = false;
+      return true;
+    } catch (e) {
+      storageFull = true;
+      return false;
+    }
+  }
+
+  function addSermon(source, startPos = 0) {
+    const entry = { id: newId(), title: titleOf(source), words: 0, added: Date.now(), opened: Date.now(), pos: startPos };
+    if (!writeText(entry.id, source)) return null;
+    sermons.push(entry);
+    return entry;
+  }
+
+  const currentEntry = () => sermons.find((e) => e.id === currentId);
+
+  // Load the library, moving older single-text data in, and make sure there's something to read.
+  function restoreLibrary() {
+    sermons = sermons.filter((e) => readText(e.id) !== null);
+    if (stored.legacy) {
+      const entry = addSermon(stored.legacy.text, Number.isInteger(stored.legacy.pos) ? stored.legacy.pos : 0);
+      if (entry) currentId = entry.id;
+    }
+    if (!sermons.length) currentId = addSermon(SAMPLE)?.id || null;
+    if (!currentEntry()) currentId = sermons.length ? mostRecent().id : null;
+    // Remove texts no sermon refers to any more (e.g. left by an interrupted delete), to free space.
+    try {
+      const keep = new Set(sermons.map((e) => TEXT_KEY + e.id));
+      Object.keys(localStorage).filter((k) => k.startsWith(TEXT_KEY) && !keep.has(k)).forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* storage unavailable */ }
+  }
+  const mostRecent = () => sermons.slice().sort((a, b) => b.opened - a.opened)[0];
+
+  restoreLibrary();
+  let text = (currentId && readText(currentId)) || SAMPLE;
+  let pos = currentEntry() && Number.isInteger(currentEntry().pos) && currentEntry().pos >= 0 ? currentEntry().pos : 0;
 
   let saveTimer = 0;
   function saveSoon() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(STORE_KEY, JSON.stringify({ schema: SCHEMA, text, settings, pos, seenMicHint }));
-      } catch (e) { /* storage unavailable: settings just won't persist */ }
-    }, 400);
+    saveTimer = setTimeout(saveIndex, 400);
   }
+  function saveIndex() {
+    const entry = currentEntry();
+    if (entry) entry.pos = pos;
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ schema: SCHEMA, settings, seenMicHint, currentId, sermons }));
+    } catch (e) { /* storage unavailable or full: settings just won't persist */ }
+  }
+  saveIndex(); // store any migration straight away
 
   // ---------------------------------------------------------------------------
   // Debug session log (open the page with ?debug): records what Chrome heard so a
@@ -834,6 +1043,10 @@ Happy reading!`;
   const sectionsMenu = $('sectionsMenu');
   const clock = $('clock');
   const cornerClock = $('cornerClock');
+  const libraryDlg = $('libraryDlg');
+  const libraryList = $('libraryList');
+  const micDlg = $('micDlg');
+  const countdownEl = $('countdown');
 
   const MIC_ICON = micIcon.innerHTML;
   const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
@@ -962,6 +1175,11 @@ Happy reading!`;
     if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
     updateProgress();
     updateSectionsButton();
+    const entry = currentEntry();
+    if (entry) {
+      entry.title = titleOf(text);
+      entry.words = words.length;
+    }
   }
 
   // Adds one line of a block: words become trackable spans, [notes] become plain faded text.
@@ -1535,7 +1753,11 @@ Happy reading!`;
     if (document.visibilityState === 'visible' && wantListening) keepScreenAwake(true);
   });
 
-  const toggleListening = () => (wantListening ? stopListening() : startListening());
+  const toggleListening = () => {
+    if (wantListening) stopListening();
+    else if (counting()) cancelCountdown();
+    else beginReading();
+  };
 
   function updateMicButton() {
     micBtn.classList.toggle('listening', wantListening);
@@ -1704,6 +1926,7 @@ Happy reading!`;
     $('showHeard').checked = settings.showHeard;
     $('cameraMode').checked = settings.cameraMode;
     $('cameraClock').checked = settings.cameraClock;
+    $('countdownSecs').value = String(settings.countdownSecs);
     syncCamera(true);
     saveSoon();
   }
@@ -1721,6 +1944,10 @@ Happy reading!`;
   $('cameraClock').addEventListener('change', (e) => {
     settings.cameraClock = e.target.checked;
     applySettings();
+  });
+  $('countdownSecs').addEventListener('change', (e) => {
+    settings.countdownSecs = Number(e.target.value);
+    saveSoon();
   });
   $('theme').addEventListener('change', (e) => {
     settings.theme = e.target.value;
@@ -1827,19 +2054,337 @@ Happy reading!`;
   });
 
   // ---------------------------------------------------------------------------
+  // Sermon library
+  // ---------------------------------------------------------------------------
+  const STORAGE_FULL = 'This browser\'s storage for Speech Scroll is full. Delete some old sermons in "Sermons", then try again.';
+
+  function sermonMeta(e) {
+    const count = e.id === currentId ? words.length : e.words || 0;
+    const at = e.id === currentId ? pos : e.pos || 0;
+    const mins = Math.max(1, Math.round(count / pace()[0]));
+    const pct = count ? Math.min(100, Math.round((at / count) * 100)) : 0;
+    const opened = new Date(e.opened).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const progressText = pct >= 100 ? 'finished' : pct ? pct + '% read' : 'not started';
+    return `${count.toLocaleString()} words · about ${mins} min · ${progressText} · opened ${opened}`;
+  }
+
+  function renderLibrary() {
+    libraryList.replaceChildren(...sermons.slice().sort((a, b) => b.opened - a.opened).map((e) => {
+      const li = document.createElement('li');
+      li.classList.toggle('current', e.id === currentId);
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'open';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = e.title;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = sermonMeta(e);
+      open.append(name, meta);
+      open.addEventListener('click', () => {
+        libraryDlg.close();
+        openSermon(e.id);
+      });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn delete';
+      del.textContent = 'Delete';
+      del.setAttribute('aria-label', 'Delete ' + e.title);
+      del.addEventListener('click', () => deleteSermon(e.id));
+      li.append(open, del);
+      return li;
+    }));
+    $('libraryHint').textContent = storageFull
+      ? STORAGE_FULL
+      : 'Each sermon remembers where you got to. Sermons are kept in this browser only; keep your .txt files as a backup.';
+  }
+
+  function openLibrary() {
+    closeSections(false);
+    renderLibrary();
+    libraryDlg.showModal();
+    const first = libraryList.querySelector('.open');
+    if (first) first.focus();
+  }
+
+  function openSermon(id) {
+    if (id === currentId) return;
+    const source = readText(id);
+    if (source === null) {
+      showBanner('That sermon couldn\'t be loaded from this browser\'s storage.');
+      return;
+    }
+    stopListening();
+    saveIndex(); // remember where we were in the sermon we're leaving
+    currentId = id;
+    const entry = currentEntry();
+    entry.opened = Date.now();
+    text = source;
+    pos = Number.isInteger(entry.pos) && entry.pos >= 0 ? entry.pos : 0;
+    recent = [];
+    misses = 0;
+    setLost(false);
+    heardLog = [];
+    setHeardVisible(false);
+    draft = null;
+    render();
+    layout();
+    scrollToCurrent(true);
+    resetClock();
+    saveIndex();
+  }
+
+  // Adds a sermon (or opens it if the same text is already there) and opens it. fileName gives the
+  // title when the text has no "# " title line.
+  function addAndOpen(source, fileName) {
+    const existing = sermons.find((e) => readText(e.id) === source);
+    if (existing) {
+      openSermon(existing.id);
+      return 'existing';
+    }
+    const entry = addSermon(source);
+    if (!entry) {
+      showBanner(STORAGE_FULL);
+      return 'full';
+    }
+    if (fileName) entry.fileName = fileName.replace(/\.[^.]+$/, '');
+    openSermon(entry.id);
+    return 'added';
+  }
+
+  function deleteSermon(id) {
+    const entry = sermons.find((e) => e.id === id);
+    if (!entry || !confirm(`Delete "${entry.title}" from Speech Scroll? Your .txt file (if you have one) isn't affected.`)) return;
+    sermons = sermons.filter((e) => e.id !== id);
+    try { localStorage.removeItem(TEXT_KEY + id); } catch (e) { /* storage unavailable */ }
+    storageFull = false;
+    if (id === currentId) {
+      currentId = null;
+      if (!sermons.length) addSermon(SAMPLE);
+      openSermon(mostRecent().id);
+    }
+    saveIndex();
+    renderLibrary();
+  }
+
+  $('addFileBtn').addEventListener('click', () => $('addFileInput').click());
+  $('addFileInput').addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    const results = [];
+    for (const file of files) results.push(addAndOpen(await file.text(), file.name));
+    libraryDlg.close();
+    const added = results.filter((r) => r === 'added').length;
+    if (results.includes('full')) return;
+    if (files.length > 1) showBanner(`Added ${added} of ${files.length} sermons. The last one is open now.`, true);
+    else if (results[0] === 'existing') showBanner('That sermon was already in your list, so it\'s open now.', true);
+  });
+  $('addPasteBtn').addEventListener('click', () => {
+    libraryDlg.close();
+    openEditor('new');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Countdown
+  // ---------------------------------------------------------------------------
+  // In camera mode, Start counts down first, so the reader can settle and look at the camera.
+  let countdownTimer = 0;
+  const counting = () => !countdownEl.hidden;
+
+  function beginReading() {
+    const secs = settings.cameraMode ? settings.countdownSecs : 0;
+    if (!secs || !SR || !words.length || atEnd()) return startListening();
+    let left = secs;
+    countdownEl.textContent = left;
+    countdownEl.hidden = false;
+    micLabel.textContent = 'Cancel';
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      left--;
+      if (left > 0) {
+        countdownEl.textContent = left;
+      } else {
+        cancelCountdown();
+        startListening();
+      }
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    clearInterval(countdownTimer);
+    countdownEl.hidden = true;
+    updateMicButton();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Microphone check
+  // ---------------------------------------------------------------------------
+  // Read a short passage: shows the microphone's level and name, what Chrome heard, and a verdict,
+  // so a wrong or muted microphone is caught before a long recording.
+  const CHECK_TEXT = 'Grace and peace to you from God our Father. Today we read from Romans chapter 8, verse 28.';
+  let check = null; // { rec, stream, ctx, raf, timers, peak, heard, done }
+
+  function openMicCheck() {
+    stopListening();
+    cancelCountdown();
+    if (settingsDlg.open) settingsDlg.close();
+    $('micSentence').textContent = CHECK_TEXT;
+    for (const id of ['micDevice', 'micHeard', 'micVerdict']) $(id).textContent = '';
+    $('micVerdict').className = 'mic-verdict';
+    $('micLevel').style.width = '0';
+    $('micStartBtn').disabled = !SR;
+    $('micStartBtn').textContent = 'Start check';
+    if (!SR) $('micVerdict').textContent = 'Speech recognition isn\'t available in this browser. Use Google Chrome.';
+    micDlg.showModal();
+  }
+
+  async function startMicCheck() {
+    endMicCheck(false);
+    const c = check = { peak: 0, heard: '', timers: [], done: false };
+    $('micStartBtn').disabled = true;
+    $('micStartBtn').textContent = 'Listening…';
+    $('micHeard').textContent = '';
+    $('micVerdict').textContent = '';
+    $('micVerdict').className = 'mic-verdict';
+
+    // Level meter (optional: the check still works without it).
+    try {
+      c.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const track = c.stream.getAudioTracks()[0];
+      $('micDevice').textContent = 'Microphone: ' + (track && track.label ? track.label : 'your default microphone') +
+        '. To use a different one, click the microphone icon in Chrome\'s address bar.';
+      c.ctx = new AudioContext();
+      const analyser = c.ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      c.ctx.createMediaStreamSource(c.stream).connect(analyser);
+      const data = new Float32Array(analyser.fftSize);
+      const draw = () => {
+        analyser.getFloatTimeDomainData(data);
+        let sum = 0;
+        for (const v of data) sum += v * v;
+        const rms = Math.sqrt(sum / data.length);
+        c.peak = Math.max(c.peak, rms);
+        $('micLevel').style.width = Math.min(100, rms * 400) + '%';
+        c.raf = requestAnimationFrame(draw);
+      };
+      draw();
+    } catch (err) {
+      $('micDevice').textContent = 'Couldn\'t show the microphone level (permission not given?).';
+    }
+    if (c !== check) return; // closed while waiting for permission
+
+    c.rec = new SR();
+    c.rec.continuous = true;
+    c.rec.interimResults = true;
+    c.rec.lang = settings.lang;
+    c.rec.onresult = (e) => {
+      c.heard = Array.from(e.results, (r) => r[0].transcript).join(' ').replace(/\s+/g, ' ').trim();
+      $('micHeard').textContent = 'Chrome heard: "' + c.heard + '"';
+      const allFinal = Array.from(e.results).every((r) => r.isFinal);
+      if (allFinal && normWords(c.heard).length >= normWords(CHECK_TEXT).length * 0.8) endMicCheck(true, null, c);
+      else if (allFinal) restartTimer(c, 2500);
+    };
+    c.rec.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      endMicCheck(true, e.error, c);
+    };
+    try {
+      c.rec.start();
+    } catch (err) {
+      endMicCheck(true, 'start', c);
+      return;
+    }
+    c.timers.push(setTimeout(() => endMicCheck(true, null, c), 15000));
+  }
+
+  function restartTimer(c, ms) {
+    clearTimeout(c.settle);
+    c.settle = setTimeout(() => endMicCheck(true, null, c), ms);
+  }
+
+  // Stops everything check c started; with report = true, shows the verdict. Late events from an
+  // earlier check pass their own c, which is already done, so they can't end a newer check.
+  function endMicCheck(report, error, c = check) {
+    if (!c || c.done) return;
+    c.done = true;
+    if (check === c) check = null;
+    c.timers.forEach(clearTimeout);
+    clearTimeout(c.settle);
+    cancelAnimationFrame(c.raf);
+    try { if (c.rec) c.rec.abort(); } catch (err) { /* not running */ }
+    if (c.stream) c.stream.getTracks().forEach((t) => t.stop());
+    if (c.ctx) c.ctx.close().catch(() => {});
+    $('micLevel').style.width = '0';
+    $('micStartBtn').disabled = false;
+    $('micStartBtn').textContent = 'Check again';
+    if (report) showMicVerdict(c, error);
+  }
+
+  function showMicVerdict(c, error) {
+    const target = normWords(CHECK_TEXT);
+    const heard = normWords(c.heard);
+    // Count target words heard in order (allowing extra or missing words in between).
+    let j = 0;
+    const missed = [];
+    for (const w of target) {
+      const k = heard.slice(j).findIndex((h) => similar(h, w));
+      if (k >= 0) j += k + 1;
+      else missed.push(w);
+    }
+    const got = target.length - missed.length;
+    const quiet = c.stream && c.peak < 0.02;
+    let kind;
+    let msg;
+    if (error === 'not-allowed' || error === 'service-not-allowed') {
+      kind = 'bad';
+      msg = 'Microphone access is blocked. Click the icon at the right of Chrome\'s address bar and allow the microphone.';
+    } else if (error === 'network') {
+      kind = 'bad';
+      msg = 'Chrome couldn\'t reach its speech service. Check your internet connection.';
+    } else if (!heard.length) {
+      kind = 'bad';
+      msg = 'Chrome didn\'t hear anything. Check that the right microphone is selected and not muted, then check again.';
+    } else if (got >= target.length * 0.85) {
+      kind = 'good';
+      msg = `Chrome heard you clearly (${got} of ${target.length} words). You're ready to record.`;
+    } else if (got >= target.length * 0.5) {
+      kind = 'warn';
+      msg = `Chrome heard most of it (${got} of ${target.length} words) but missed: ${missed.join(', ')}. Try a little louder or closer to the microphone, then check again.`;
+    } else {
+      kind = 'bad';
+      msg = `Chrome understood only ${got} of ${target.length} words. Try sitting closer, a quieter room, or a different microphone.`;
+    }
+    if (quiet && kind !== 'good') msg += ' Your microphone level was very low.';
+    $('micVerdict').textContent = msg;
+    $('micVerdict').className = 'mic-verdict ' + kind;
+    logEvent('miccheck', { got, of: target.length, heard: c.heard, peak: Math.round(c.peak * 1000) / 1000, error: error || null });
+  }
+
+  $('micStartBtn').addEventListener('click', startMicCheck);
+  $('micCheckBtn').addEventListener('click', openMicCheck);
+  micDlg.addEventListener('close', () => endMicCheck(false));
+
+  // ---------------------------------------------------------------------------
   // Editing text
   // ---------------------------------------------------------------------------
   let draft = null;          // unapplied edits, kept if the dialog is closed by accident
   let replacedWhole = false; // "Load sample" / "Open file" start from the top
 
-  function openEditor() {
-    editor.value = draft !== null ? draft : text;
+  // mode 'edit': change the open sermon. mode 'new': paste a sermon to add to the library.
+  let editorMode = 'edit';
+  function openEditor(mode = 'edit') {
+    editorMode = mode;
+    $('editTitle').textContent = mode === 'new' ? 'Paste a new sermon' : 'Edit this sermon';
+    $('applyBtn').textContent = mode === 'new' ? 'Add sermon' : 'Use this text';
+    $('openFileBtn').textContent = mode === 'new' ? 'Open .txt file' : 'Replace with .txt file';
+    editor.value = mode === 'new' ? '' : draft !== null ? draft : text;
     replacedWhole = false;
     editDlg.showModal();
     editor.focus();
   }
   editDlg.addEventListener('close', () => {
-    if (!editDlg.returnValue) draft = editor.value !== text ? editor.value : null;
+    if (!editDlg.returnValue && editorMode === 'edit') draft = editor.value !== text ? editor.value : null;
     editDlg.returnValue = '';
   });
 
@@ -1857,9 +2402,20 @@ Happy reading!`;
   }
 
   $('applyBtn').addEventListener('click', () => {
+    if (editorMode === 'new') {
+      if (!editor.value.trim()) return editor.focus();
+      editDlg.close('applied');
+      if (addAndOpen(editor.value) === 'existing') showBanner('That sermon was already in your list, so it\'s open now.', true);
+      return;
+    }
     draft = null;
     editDlg.close('applied');
     if (editor.value === text) return;
+    if (!writeText(currentId, editor.value)) {
+      draft = editor.value;
+      showBanner(STORAGE_FULL);
+      return;
+    }
     const oldWords = words;
     const oldPos = pos;
     text = editor.value;
@@ -1899,7 +2455,7 @@ Happy reading!`;
   }
   // A click on the backdrop closes a dialog, but not the end of a text selection or
   // resize drag that started inside it and was released outside.
-  for (const dlg of [editDlg, settingsDlg]) {
+  for (const dlg of [editDlg, settingsDlg, libraryDlg, micDlg]) {
     let downOnBackdrop = false;
     dlg.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg; });
     dlg.addEventListener('click', (e) => {
@@ -1960,7 +2516,8 @@ Happy reading!`;
     resetClock();
   }
   $('restartBtn').addEventListener('click', restart);
-  $('editBtn').addEventListener('click', openEditor);
+  $('editBtn').addEventListener('click', () => openEditor('edit'));
+  $('libraryBtn').addEventListener('click', openLibrary);
   $('settingsBtn').addEventListener('click', () => settingsDlg.showModal());
   $('fullBtn').addEventListener('click', toggleFullscreen);
   // Don't leave toolbar buttons focused, or Space would "click" them again.
@@ -1970,6 +2527,7 @@ Happy reading!`;
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Tab' || e.key === 'Escape') peek();
+    if (e.key === 'Escape' && counting()) return cancelCountdown();
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (document.querySelector('dialog[open]') || !sectionsMenu.hidden) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
@@ -1995,7 +2553,9 @@ Happy reading!`;
       '=': () => changeFontSize(4),
       '-': () => changeFontSize(-4),
       f: toggleFullscreen,
-      e: openEditor,
+      e: () => openEditor('edit'),
+      o: openLibrary,
+      m: openMicCheck,
       s: () => settingsDlg.showModal()
     };
     const action = actions[e.key.length === 1 ? e.key.toLowerCase() : e.key];

@@ -1,6 +1,6 @@
 # Chat plan
 
-**Already done (v1.1.0):** camera mode, the sermon text format, the section list, the time display, and a debug log for full sermons.
+**Already done:** camera mode, the sermon text format, the section list, the time display, full-length debug logs (v1.1.0), plus the sermon library, the microphone check and the camera-mode countdown (v1.2.0).
 
 Do the rest in order, with **one new chat per task**. For every chat:
 - **Attach** the latest `speech-scroll-app.html` and `PROJECT_BRIEF.md`, plus any extra file the task lists.
@@ -23,7 +23,8 @@ Do the rest in order, with **one new chat per task**. For every chat:
 
 1. **Open the app with `?debug` at the end of the address.** In Chrome's address bar, add it after `.html`,
    e.g. `file:///C:/Users/you/Documents/speech-scroll-app.html?debug`, then press Enter.
-2. **Load your test text:** open `sample-sermon.txt` or a real sermon through **Edit text → Open .txt file**.
+2. **Load your test text:** add `sample-sermon.txt` or a real sermon with **Sermons → Add from .txt file**.
+   Then press **M** and run the **microphone check** from where you'll record.
 3. **Set up as you will for recording:** webcam, camera mode (press C), your normal distance and voice.
 4. **Press Start and read for 5–10 minutes.** (A full sermon also fits in the log.) Please include:
    - normal reading at your preaching pace, with pauses

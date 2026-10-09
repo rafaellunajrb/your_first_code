@@ -294,7 +294,9 @@ async function start(page) {
     const cam = await page.evaluate(() => ({ line: document.getElementById('linePos').value, width: getComputedStyle(document.documentElement).getPropertyValue('--measure') }));
     check('C turns on camera mode with its own high, narrow layout', normal.line === '33' && cam.line === '14' && cam.width === '26ch', JSON.stringify({ normal, cam }));
     await start(page);
-    await page.waitForTimeout(400);
+    check('camera mode counts down before listening', (await page.textContent('#countdown')) === '3' && (await status(page)) === 'Not listening');
+    await page.waitForTimeout(3400);
+    check('listening starts after the countdown', (await status(page)) === 'Listening' && await page.isHidden('#countdown'));
     const hidden = await page.evaluate(() => ({
       toolbar: getComputedStyle(document.querySelector('.toolbar')).opacity,
       readerTop: document.getElementById('reader').getBoundingClientRect().top,
@@ -326,6 +328,95 @@ async function start(page) {
     check('pausing shows the toolbar again', (await page.evaluate(() => getComputedStyle(document.querySelector('.toolbar')).opacity)) === '1');
     await page.keyboard.press('c');
     check('turning camera mode off restores normal layout', (await page.evaluate(() => document.getElementById('linePos').value)) === '33');
+  }
+
+  // --- Countdown ---------------------------------------------------------------------------
+  {
+    const page = await open(browser, { store: { text: 'Countdown test text here.', seenMicHint: true, settings: { cameraMode: true, countdownSecs: 5 } } });
+    await start(page);
+    check('countdown uses the chosen length', (await page.textContent('#countdown')) === '5');
+    await page.keyboard.press('Escape');
+    check('Escape cancels the countdown', await page.isHidden('#countdown') && (await status(page)) === 'Not listening' && (await page.textContent('#micLabel')) === 'Start');
+    const plain = await open(browser, { text: 'No countdown outside camera mode.' });
+    await start(plain);
+    check('no countdown outside camera mode', (await status(plain)) === 'Listening');
+  }
+
+  // --- Sermon library --------------------------------------------------------------------------
+  {
+    const page = await open(browser, { store: { text: 'The old single text from version one point one. It should become the first sermon.', pos: 5, seenMicHint: true } });
+    check('older saved text becomes the first sermon, place kept', (await current(page)) === 'version', await current(page));
+    await page.keyboard.press('o');
+    check('O opens the sermon list', await page.isVisible('#libraryDlg'));
+    const sermonFile = path.join(__dirname, '../handoff/sample-sermon.txt');
+    await page.setInputFiles('#addFileInput', sermonFile);
+    await page.waitForTimeout(200);
+    check('adding a .txt file opens it', (await page.textContent('#text h1')) === 'The Faithfulness of God' && await page.isHidden('#libraryDlg'));
+    await page.click('.w >> text=Notice');
+    await page.keyboard.press('o');
+    const names = await page.$$eval('#libraryList .name', (els) => els.map((e) => e.textContent));
+    check('the list shows both sermons, newest first', names.length === 2 && names[0] === 'The Faithfulness of God' && names[1].startsWith('The old single text') && names[1].length <= 70, names.join('|'));
+    const meta = await page.textContent('#libraryList li.current .meta');
+    check('list shows words, length and progress', /words · about \d+ min · \d+% read · opened/.test(meta), meta);
+    await page.click('#libraryList li:not(.current) .open');
+    check('switching sermons restores that sermon\'s place', (await current(page)) === 'version', await current(page));
+    await page.keyboard.press('o');
+    await page.click('#libraryList li:not(.current) .open');
+    check('switching back restores the other place too', (await current(page)) === 'Notice', await current(page));
+    await page.keyboard.press('o');
+    await page.setInputFiles('#addFileInput', sermonFile);
+    await page.waitForTimeout(200);
+    check('adding the same file again opens the existing one', (await page.$$eval('#libraryList li', (l) => l.length)) === 2 && (await page.textContent('#bannerText')).includes('already in your list'));
+    await page.keyboard.press('o');
+    await page.click('#addPasteBtn');
+    check('"Paste a new sermon" opens an empty editor', (await page.inputValue('#editor')) === '' && (await page.textContent('#editTitle')) === 'Paste a new sermon');
+    await page.fill('#editor', '# Pasted Sermon\n\nThis one was pasted in.');
+    await page.click('#applyBtn');
+    check('pasting adds and opens a new sermon', (await page.textContent('#text h1')) === 'Pasted Sermon');
+    await page.keyboard.press('o');
+    page.once('dialog', (d) => d.accept());
+    await page.click('#libraryList li.current .delete');
+    const after = await page.$$eval('#libraryList .name', (els) => els.map((e) => e.textContent));
+    check('deleting the open sermon switches to the most recent other one', after.length === 2 && !after.includes('Pasted Sermon') && (await page.textContent('#text h1')) !== 'Pasted Sermon', after.join('|'));
+    await page.reload();
+    await page.waitForTimeout(100);
+    const kept = await page.evaluate(() => JSON.parse(localStorage.getItem('speechScroll.v2')));
+    check('library is saved with schema 3', kept.schema === 3 && Array.isArray(kept.sermons) && !('text' in kept), JSON.stringify(Object.keys(kept)));
+    // Editing the open sermon saves its new text.
+    await page.keyboard.press('e');
+    check('"Edit text" edits the open sermon', (await page.textContent('#editTitle')) === 'Edit this sermon');
+  }
+  {
+    const page = await open(browser);
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('speechScroll.v2')));
+    check('first run starts with the welcome sermon', saved.sermons.length === 1 && saved.sermons[0].title === 'Welcome to Speech Scroll');
+  }
+
+  // --- Microphone check ----------------------------------------------------------------------------
+  {
+    const page = await open(browser, { text: 'Anything.' });
+    await page.keyboard.press('m');
+    check('M opens the microphone check', await page.isVisible('#micDlg') && (await page.textContent('#micSentence')).startsWith('Grace and peace'));
+    await page.click('#micStartBtn');
+    await page.waitForFunction(() => window.__rec && document.getElementById('micStartBtn').textContent === 'Listening…');
+    await page.waitForTimeout(300);
+    const device = await page.textContent('#micDevice');
+    check('shows which microphone is used', device.startsWith('Microphone:'), device);
+    await page.evaluate(() => __say('grace and peace to you from god our father today we read from romans chapter 8 verse 28', true));
+    await page.waitForTimeout(100);
+    const good = await page.textContent('#micVerdict');
+    check('clear speech gives a "ready to record" verdict', good.includes('ready to record') && (await page.getAttribute('#micVerdict', 'class')).includes('good'), good);
+    const firstRec = await page.evaluateHandle(() => window.__rec);
+    await page.click('#micStartBtn');
+    await page.waitForFunction((old) => window.__rec !== old, firstRec);
+    await page.evaluate((old) => old.onresult({ results: [Object.assign([{ transcript: 'late words from the last check' }], { isFinal: true })], resultIndex: 0 }), firstRec);
+    check('a late result from the previous check doesn\'t end the new one', (await page.textContent('#micStartBtn')) === 'Listening…');
+    await page.evaluate(() => __say('grace and peas to you from guard our today we red from roman', true));
+    await page.waitForTimeout(2800);
+    const warn = await page.textContent('#micVerdict');
+    check('patchy speech lists the missed words', /heard most of it|understood only/.test(warn) && warn.includes('father'), warn);
+    await page.keyboard.press('Escape');
+    check('closing the check leaves no recognizer running', await page.evaluate(() => document.getElementById('micStartBtn').disabled === false));
   }
 
   // --- Long debug log -----------------------------------------------------------------------
