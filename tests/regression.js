@@ -2,7 +2,7 @@
 // highlight ends up. Stream ops in scenarios.json: "~" = grow an interim result word by
 // word then finalise it, "i" = one interim result, "f" = one final result.
 // Add a scenario here whenever a real session log shows the tracking going wrong.
-const { chromium } = require('playwright');
+const launch = require('./launch.js');
 const path = require('path');
 const fs = require('fs');
 const FAKE = require('./fake-recognizer.js');
@@ -11,7 +11,7 @@ const APP = path.resolve(__dirname, '../speech-scroll-app.html');
 
 (async () => {
   const scenarios = JSON.parse(fs.readFileSync(path.join(__dirname, 'scenarios.json'), 'utf8'));
-  const browser = await chromium.launch();
+  const browser = await launch();
   let failed = 0;
   for (const s of scenarios) {
     const ctx = await browser.newContext();

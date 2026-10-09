@@ -1,6 +1,6 @@
 // Feature checks for the app in headless Chromium with a fake recognizer.
 // Run: NODE_PATH=$(npm root -g) node tests/features.js
-const { chromium } = require('playwright');
+const launch = require('./launch.js');
 const path = require('path');
 const fs = require('fs');
 const FAKE = require('./fake-recognizer.js');
@@ -34,7 +34,7 @@ async function start(page) {
 }
 
 (async () => {
-  const browser = await chromium.launch();
+  const browser = await launch();
 
   // --- Tracking -------------------------------------------------------------
   {

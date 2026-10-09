@@ -5,7 +5,7 @@
 //   node tests/replay-log.js path/to/speech-scroll-log.json [--trace]
 //
 // The log's own "pos" values come from the app version that recorded it (log.version).
-const { chromium } = require('playwright');
+const launch = require('./launch.js');
 const path = require('path');
 const fs = require('fs');
 const FAKE = require('./fake-recognizer.js');
@@ -14,7 +14,7 @@ const APP = 'file://' + path.resolve(__dirname, '../speech-scroll-app.html') + '
 
 async function replay(logFile, { trace = false, browser: shared } = {}) {
   const log = JSON.parse(fs.readFileSync(logFile, 'utf8'));
-  const browser = shared || await chromium.launch();
+  const browser = shared || await launch();
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
   await page.addInitScript(FAKE);
