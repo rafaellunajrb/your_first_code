@@ -4,6 +4,7 @@ const { chromium } = require('playwright');
 const path = require('path');
 const fs = require('fs');
 const FAKE = require('./fake-recognizer.js');
+const { replay } = require('./replay-log.js');
 
 const APP = 'file://' + path.resolve(__dirname, '../speech-scroll-app.html');
 let failed = 0;
@@ -188,7 +189,7 @@ async function start(page) {
     await page.fill('#editor', '# A heading\nBody text right under it.');
     await page.click('#applyBtn');
     const blocks = await page.evaluate(() => [...document.querySelectorAll('#text > *')].map((el) => el.tagName + ':' + el.textContent));
-    check('heading line followed by text renders as heading + paragraph', blocks.join('|') === 'H2:A heading|P:Body text right under it.', blocks.join('|'));
+    check('heading line followed by text renders as heading + paragraph', blocks.join('|') === 'H1:A heading|P:Body text right under it.', blocks.join('|'));
   }
 
   // --- Keys ---------------------------------------------------------------------
@@ -207,6 +208,160 @@ async function start(page) {
     await page.focus('#restartBtn');
     await page.keyboard.press('Space');
     check('Space on a focused button presses the button, not the mic', (await status(page)) === 'Not listening');
+  }
+
+  // --- Sermon text format ---------------------------------------------------------
+  {
+    const sermon = fs.readFileSync(path.join(__dirname, '../handoff/sample-sermon.txt'), 'utf8');
+    const page = await open(browser, { text: sermon });
+    const shape = await page.evaluate(() => ({
+      h1: document.querySelectorAll('#text h1').length,
+      h2: document.querySelectorAll('#text h2').length,
+      quotes: document.querySelectorAll('#text blockquote').length,
+      quoteLines: document.querySelector('#text blockquote').querySelectorAll('br').length,
+      notes: [...document.querySelectorAll('#text .note')].map((n) => n.textContent),
+      noteWords: document.querySelectorAll('#text .note .w').length
+    }));
+    check('title, sections and scripture render', shape.h1 === 1 && shape.h2 === 4 && shape.quotes === 1 && shape.quoteLines === 1, JSON.stringify(shape));
+    check('[notes] render as notes, not trackable words', shape.notes.includes('[Pause. Look up at the camera.]') && shape.notes.includes('[JEH-won]') && shape.noteWords === 0, shape.notes.join(' | '));
+    await start(page);
+    await say(page, 'good morning church it is good to be together again today we are looking at a promise that has carried believers through every generation through good seasons and hard ones');
+    await say(page, 'before we begin let me ask you a question');
+    check('reading straight past a [note] keeps tracking', (await current(page)) === 'When', await current(page));
+    await say(page, 'pastor kim jae won once told me a story about this verse');
+    check('a note inside a sentence is skipped', (await current(page)) === 'When', await current(page));
+  }
+  {
+    const page = await open(browser, { text: 'Before [an unclosed note that runs on\nand on] after.\n\nNext paragraph [never closed\n\nThird paragraph is normal.' });
+    const words = await page.evaluate(() => [...document.querySelectorAll('#text .w')].map((w) => w.textContent).join(' '));
+    check('notes can span lines; an unclosed [ stops at the paragraph end', words === 'Before after. Next paragraph Third paragraph is normal.', words);
+  }
+
+  // --- Sections -----------------------------------------------------------------------
+  {
+    const sermon = fs.readFileSync(path.join(__dirname, '../handoff/sample-sermon.txt'), 'utf8');
+    const page = await open(browser, { text: sermon });
+    check('Sections button shows for sectioned text', await page.isVisible('#sectionsBtn'));
+    await page.click('#sectionsBtn');
+    const items = await page.$$eval('#sectionsMenu button', (bs) => bs.map((b) => b.textContent));
+    check('menu lists the title and sections', items.join('|') === 'The Faithfulness of God|Introduction|The promise|The promise is for you|Closing prayer', items.join('|'));
+    await page.click('#sectionsMenu button:has-text("The promise is for you")');
+    check('choosing a section jumps to its first word', (await current(page)) === 'The' && await page.isHidden('#sectionsMenu'));
+    await page.keyboard.press(']');
+    check('] goes to the next section', (await current(page)) === 'Closing', await current(page));
+    await page.keyboard.press('[');
+    check('[ goes back a section', (await current(page)) === 'The', await current(page));
+    await page.click('#sectionsBtn');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Escape');
+    check('Escape closes the menu and returns focus', await page.isHidden('#sectionsMenu') && await page.evaluate(() => document.activeElement.id === 'sectionsBtn'));
+    const plain = await open(browser, { text: 'Just one paragraph, no sections.' });
+    check('no Sections button without sections', await plain.isHidden('#sectionsBtn'));
+  }
+
+  // --- Time & pace ----------------------------------------------------------------------
+  {
+    const page = await open(browser, { text: Array.from({ length: 130 * 3 }, (_, i) => 'word' + i).join(' ') });
+    check('estimate before reading uses 130 wpm', (await page.textContent('#clockLeft')).includes('about 3 min left'), await page.textContent('#clockLeft'));
+    await start(page);
+    await page.waitForTimeout(1200);
+    const elapsed1 = await page.textContent('#clockElapsed');
+    await page.keyboard.press('Space');
+    await page.waitForTimeout(1200);
+    check('clock runs only while listening', elapsed1 === '0:01' && (await page.textContent('#clockElapsed')) === '0:01', elapsed1);
+    // Simulate 1 minute of listening at 65 words/min to check the measured pace.
+    const measured = await page.evaluate(async () => {
+      const realNow = performance.now.bind(performance);
+      let offset = 0;
+      performance.now = () => realNow() + offset;
+      document.getElementById('micBtn').click();
+      await new Promise((r) => setTimeout(r, 30));
+      for (let i = 0; i < 65; i++) { offset += 60000 / 65; __say('word' + i, true); }
+      return { left: document.getElementById('clockLeft').textContent, title: document.getElementById('clock').title };
+    });
+    // ~65 wpm: the second of listening before reading also counts, so allow a little lower.
+    const wpm = Number((/(\d+) words\/min/.exec(measured.title) || [])[1]);
+    check('pace is measured from reading', wpm >= 60 && wpm <= 65 && measured.left.includes('about 5 min left'), JSON.stringify(measured));
+    await page.keyboard.press('Home');
+    check('Home resets the clock', (await page.textContent('#clockElapsed')) === '0:00');
+  }
+
+  // --- Camera mode ------------------------------------------------------------------------
+  {
+    const page = await open(browser);
+    const normal = await page.evaluate(() => ({ line: document.getElementById('linePos').value, width: getComputedStyle(document.documentElement).getPropertyValue('--measure') }));
+    await page.keyboard.press('c');
+    const cam = await page.evaluate(() => ({ line: document.getElementById('linePos').value, width: getComputedStyle(document.documentElement).getPropertyValue('--measure') }));
+    check('C turns on camera mode with its own high, narrow layout', normal.line === '33' && cam.line === '14' && cam.width === '26ch', JSON.stringify({ normal, cam }));
+    await start(page);
+    await page.waitForTimeout(400);
+    const hidden = await page.evaluate(() => ({
+      toolbar: getComputedStyle(document.querySelector('.toolbar')).opacity,
+      readerTop: document.getElementById('reader').getBoundingClientRect().top,
+      corner: !document.getElementById('cornerClock').hidden
+    }));
+    check('while reading, controls hide and text uses the full height', hidden.toolbar === '0' && hidden.readerTop === 0 && hidden.corner, JSON.stringify(hidden));
+    await say(page, 'welcome to speech scroll reading press the start button');
+    const lineY = await page.evaluate(() => {
+      const r = document.querySelector('.w.current').getBoundingClientRect();
+      return Math.round((r.top + r.height / 2) / innerHeight * 100);
+    });
+    await page.waitForTimeout(900);
+    const lineY2 = await page.evaluate(() => {
+      const r = document.querySelector('.w.current').getBoundingClientRect();
+      return Math.round((r.top + r.height / 2) / innerHeight * 100);
+    });
+    check('current line sits high, near the webcam', lineY2 >= 10 && lineY2 <= 18, `${lineY}% -> ${lineY2}%`);
+    await page.keyboard.press('PageDown');
+    await page.waitForTimeout(100);
+    check('clicker keys do not bring the toolbar back', (await page.evaluate(() => getComputedStyle(document.querySelector('.toolbar')).opacity)) === '0');
+    await page.mouse.move(300, 300);
+    await page.mouse.move(320, 310);
+    await page.waitForTimeout(350);
+    check('moving the mouse shows the toolbar', (await page.evaluate(() => getComputedStyle(document.querySelector('.toolbar')).opacity)) === '1');
+    await page.waitForTimeout(3300);
+    check('toolbar hides again after 3 seconds', (await page.evaluate(() => getComputedStyle(document.querySelector('.toolbar')).opacity)) === '0');
+    await page.evaluate(() => document.getElementById('micBtn').click());
+    await page.waitForTimeout(400);
+    check('pausing shows the toolbar again', (await page.evaluate(() => getComputedStyle(document.querySelector('.toolbar')).opacity)) === '1');
+    await page.keyboard.press('c');
+    check('turning camera mode off restores normal layout', (await page.evaluate(() => document.getElementById('linePos').value)) === '33');
+  }
+
+  // --- Long debug log -----------------------------------------------------------------------
+  {
+    const page = await open(browser, { text: 'Testing a long log with repeated identical events.', query: '?debug' });
+    await start(page);
+    const count = await page.evaluate(() => {
+      for (let i = 0; i < 3; i++) __say('testing a', false); // identical events: logged once
+      __say('testing a long', false);
+      return document.getElementById('debugBtn').title;
+    });
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#debugBtn')]);
+    const log = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    const results = log.events.filter((e) => e.type === 'result');
+    check('identical events are logged once, with version and settings', results.length === 2 && log.version && log.settings && log.settings.lang, `${results.length} results, v${log.version}`);
+    check('logged position is the one after the event', results[0].pos === 2 && results[1].pos === 3, results.map((r) => r.pos).join(','));
+    check('button tooltip shows the event count', /\(\d+ events\)/.test(count), count);
+  }
+
+  // --- Replaying a recorded log ------------------------------------------------------------
+  {
+    const sermon = fs.readFileSync(path.join(__dirname, '../handoff/sample-sermon.txt'), 'utf8');
+    const page = await open(browser, { text: sermon, query: '?debug' });
+    await start(page);
+    await page.evaluate(() => {
+      __say('the faithfulness of god introduction good morning', false);
+      __say('the faithfulness of god introduction good morning church it is good to be', true);
+      __say('together again today we are looking at a', false);
+      __say('together again today we are looking at a promise', true);
+    });
+    await page.click('.w >> text=Notice');
+    await page.evaluate(() => __say('notice the first word of the promise it does not begin with us', true));
+    const [download] = await Promise.all([page.waitForEvent('download'), page.click('#debugBtn')]);
+    const file = await download.path();
+    const result = await replay(file, { browser });
+    check('replaying a recorded log reproduces the session exactly', result.results === 5 && result.differences === 0 && result.finalReplayed === result.finalLogged, `${result.differences} differences of ${result.results}`);
   }
 
   // --- Settings & startup ---------------------------------------------------------

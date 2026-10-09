@@ -1,4 +1,4 @@
-# Test checklist (about 10 minutes, in Chrome)
+# Test checklist (about 15 minutes, in Chrome)
 
 Run this after **every** change, as well as the task's own test steps. If anything fails, tell the chat which step,
 what you expected and what you saw. Keep your previous working version until everything passes.
@@ -34,10 +34,22 @@ Press **Edit text → Load sample → Use this text**, then **Restart**.
 16. **Read the last sentence.** The status shows **Finished** with a message.
     Pressing Space does nothing, and **Restart** goes back to the top.
 
+## C2. Sermon features
+17. **Open `sample-sermon.txt`** (Edit text → Open .txt file → Use this text). The title is large, sections are headings,
+    the scripture is an indented block, and `[notes]` are small and faded.
+18. **Read past a note without saying it.** Tracking carries on as normal.
+19. **Sections:** press **Sections** and pick one: the highlight jumps there. Press `]` and `[` to move between sections.
+20. **Time:** the toolbar shows the elapsed time and "about N min left". The clock only runs while listening.
+    **Restart** sets it back to 0:00. Hovering over it shows your pace after a minute or so of reading.
+21. **Camera mode:** press **C** and Start.
+    - The controls fade away and the current line sits high, near the webcam, with a small clock in the corner.
+    - Moving the mouse brings the toolbar back for 3 seconds, but **PgDn does not**.
+    - Pause brings the controls back, and **C** again returns to the normal layout.
+
 ## D. Debug log
-17. **Open the file with `?debug` at the end of the address.** A "Download session log" button appears.
-    Read a sentence, press it, and a `.json` file downloads.
+22. **Open the file with `?debug` at the end of the address.** A "Download session log" button appears.
+    Read a sentence, press it, and a `.json` file downloads. Hovering over the button shows how many events it has recorded.
 
 ## E. Whatever the task changed
-18. **Do the chat's own numbered test steps.**
-19. **Check the task's feature in both light and dark theme**, and in a narrow window (drag the window narrow).
+23. **Do the chat's own numbered test steps.**
+24. **Check the task's feature in both light and dark theme**, and in a narrow window (drag the window narrow).

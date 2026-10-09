@@ -15,7 +15,7 @@ You don't need any developer tools. You do the testing yourself in Chrome, one s
 | `SERMON_FORMAT.md` | The text format for your sermons, plus an instruction to paste into Sermon Bridge. |
 | `sample-sermon.txt` | A short sermon in that format, for testing. |
 | `CHANGELOG.md` | What has changed so far. Each chat adds a line. |
-| `tests/` | Automated tests. You only need them if you ever use Claude Code again. A chat can't run them. |
+| `tests/`, `tools/`, `package.json`, `CLAUDE.md` | Automated tests and helper tools for Claude Code sessions. A chat can't run them, but GitHub runs the tests by itself (below). |
 
 ## How each chat works
 
@@ -72,10 +72,14 @@ Only the app's code is on the web.
 4. **Reload the app:** after 1–2 minutes, reload the installed app with Ctrl+R (Cmd+R on a Mac).
    It can take up to 10 minutes for the change to appear.
 
+**Automatic check:** after each upload, GitHub runs the app's automated tests by itself (about 3 minutes).
+On the repository page, a green ✓ next to your upload means they passed. A red ✗ means something broke: open it,
+copy the lines that say FAIL, and give them to the chat that made the change.
+
 If a new version breaks something, upload your previous saved version the same way.
 
 ## Where things stand
 
-The app works, but **it has not yet been tested with a real voice**.
-Chats 1–5 in `CHAT_PLAN.md` add the sermon features. **Step R** is a real read-through with the recording log on.
-It can come at any point, and the sooner the better. **Chat 6** uses that log to tune the tracking for preaching.
+Version 1.1.0 has the sermon features: camera mode, the sermon text format, sections, the time display, and full-length debug logs.
+**It has not yet been tested with a real voice.** **Step R** in `CHAT_PLAN.md` is a real read-through with the recording log on,
+and **Chat 1** uses that log to tune the tracking for preaching.

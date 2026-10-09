@@ -34,8 +34,7 @@ Pastor Kim Jae-won once told me a story about this verse.
 | `> text` | Scripture you read aloud | Indented and styled differently, still followed by voice |
 | `[text]` | A note to yourself that you **don't** say aloud | Small and faded, skipped by the voice tracking |
 
-**Note:** `>` and `[ ]` are planned in **Chat 2** of the plan. Until then, Speech Scroll shows them as ordinary text.
-Headings already work.
+All of this works in Speech Scroll v1.1.0 and later. The **Sections** button (or the `[` and `]` keys) jumps between `##` sections.
 
 ## Writing rules
 

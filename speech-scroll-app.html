@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Speech Scroll v1.0.1 (voice-following teleprompter). Project brief and change plan: handoff/ folder. -->
+<!-- Speech Scroll v1.1.0 (voice-following teleprompter); the version also lives in APP_VERSION. Project brief and change plan: handoff/ folder. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -23,6 +23,8 @@
     --warn: #c98a00;
     --warn-line: rgba(232, 160, 0, 0.16);
     --warn-edge: rgba(232, 160, 0, 0.9);
+    --quote-edge: rgba(47, 111, 222, 0.45);
+    --quote-bg: rgba(47, 111, 222, 0.05);
     --ok: #1f9d55;
     --hl: rgba(255, 204, 51, 0.55);
     --line: rgba(47, 111, 222, 0.10);
@@ -48,6 +50,8 @@
       --warn: #f2b33d;
       --warn-line: rgba(242, 179, 61, 0.13);
       --warn-edge: rgba(242, 179, 61, 0.85);
+      --quote-edge: rgba(111, 157, 255, 0.55);
+      --quote-bg: rgba(111, 157, 255, 0.06);
       --ok: #4ad084;
       --hl: rgba(255, 204, 51, 0.45);
       --line: rgba(111, 157, 255, 0.09);
@@ -71,6 +75,8 @@
     --warn: #f2b33d;
     --warn-line: rgba(242, 179, 61, 0.13);
     --warn-edge: rgba(242, 179, 61, 0.85);
+    --quote-edge: rgba(111, 157, 255, 0.55);
+    --quote-bg: rgba(111, 157, 255, 0.06);
     --ok: #4ad084;
     --hl: rgba(255, 204, 51, 0.45);
     --line: rgba(111, 157, 255, 0.09);
@@ -143,6 +149,71 @@
     min-width: 0;
   }
   .status-text { overflow: hidden; text-overflow: ellipsis; }
+  .clock {
+    margin-left: 8px;
+    font-size: 14px;
+    color: var(--subtle);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+
+  /* ---------- Sections menu ---------- */
+  .menu {
+    position: fixed;
+    top: 62px;
+    right: 16px;
+    z-index: 30;
+    min-width: 220px;
+    max-width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu button:hover, .menu button:focus-visible { background: var(--hover); outline: none; }
+  .menu button.title { font-weight: 600; }
+  .menu button.section { padding-left: 22px; }
+  .menu button[aria-current="true"] { color: var(--accent); font-weight: 600; }
+
+  /* ---------- Camera mode: while reading, only the text (toolbar returns on mouse move) ---------- */
+  body.camera.listening #reader { top: 0; }
+  body.camera.listening .toolbar, body.camera.listening .progress { transition: opacity 0.25s ease; }
+  body.camera.listening:not(.peek) .toolbar,
+  body.camera.listening:not(.peek) .progress { opacity: 0; pointer-events: none; }
+  body.camera.listening:not(.peek) #heard,
+  body.camera.listening:not(.peek) #banner.info,
+  body.camera.listening:not(.peek) .menu { display: none !important; }
+  body.camera.listening:not(.peek) #reader,
+  body.camera.listening:not(.peek) .w { cursor: none; }
+  body.camera #marker.lost { background: var(--line); } /* keep only the amber edge on camera */
+  .corner-clock {
+    position: fixed;
+    left: 16px;
+    bottom: 12px;
+    z-index: 15;
+    font-size: 13px;
+    color: var(--subtle);
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
   .dot.listening { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
   .dot.starting { background: var(--accent); animation: pulse 0.8s ease-in-out infinite; }
@@ -193,7 +264,19 @@
     overflow-wrap: break-word;
   }
   #text p { margin: 0 0 0.9em; }
+  #text h1 { font-size: 1.3em; margin: 0.2em 0 0.6em; line-height: 1.25; }
   #text h2 { font-size: 1.15em; margin: 0.6em 0 0.5em; line-height: 1.3; }
+  /* Scripture read aloud ("> " lines) */
+  #text blockquote {
+    margin: 0 0 0.9em;
+    padding: 0.15em 0 0.15em 0.7em;
+    border-left: 0.12em solid var(--quote-edge);
+    background: var(--quote-bg);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  /* [Notes] the reader doesn't say aloud: visible but small, and skipped by tracking */
+  #text .note { font-size: 0.55em; font-style: italic; color: var(--subtle); }
+  #text p.note-only { margin-bottom: 0.6em; line-height: 1.3; }
   #text .empty { color: var(--subtle); font-size: 0.6em; text-align: center; }
   .w {
     cursor: pointer;
@@ -363,6 +446,7 @@
     .btn.primary .label { display: inline; }
     .btn { padding: 0 9px; }
     .status .status-text { display: none; }
+    .clock-left { display: none; }
     .field { grid-template-columns: 1fr 48px; }
     .field label { grid-column: 1 / 3; }
     .field select { grid-column: 1 / 3; }
@@ -381,6 +465,7 @@
     <span id="dot" class="dot"></span>
     <span id="statusText" class="status-text">Not listening</span>
   </div>
+  <div id="clock" class="clock" hidden><span id="clockElapsed"></span><span id="clockLeft" class="clock-left"></span></div>
   <div class="spacer"></div>
   <button id="installBtn" class="btn" title="Install Speech Scroll as an app with its own window and icon" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 8v6M9 11l3 3 3-3M8 21h8"/></svg>
@@ -389,6 +474,10 @@
   <button id="debugBtn" class="btn" title="Download a log of what Chrome heard, to help tune tracking" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
     <span class="label">Download session log</span>
+  </button>
+  <button id="sectionsBtn" class="btn" title="Jump to a section ([ and ] for previous/next)" aria-haspopup="menu" aria-expanded="false" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+    <span class="label">Sections</span>
   </button>
   <button id="restartBtn" class="btn" title="Go back to the beginning (Home)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
@@ -408,6 +497,7 @@
   </button>
 </header>
 <div id="progress" class="progress"></div>
+<div id="sectionsMenu" class="menu" role="menu" aria-label="Sections" hidden></div>
 
 <div id="marker"></div>
 <main id="reader" tabindex="-1">
@@ -419,6 +509,7 @@
   <span class="label">Back to my place</span>
 </button>
 <div id="heard" hidden></div>
+<div id="cornerClock" class="corner-clock" aria-hidden="true" hidden></div>
 <div id="banner" role="alert" hidden><p id="bannerText"></p><button id="bannerClose" aria-label="Dismiss">&times;</button></div>
 
 <!-- Edit text -->
@@ -429,7 +520,7 @@
   </div>
   <div class="dlg-body">
     <textarea id="editor" spellcheck="true" placeholder="Paste the text you want to read aloud..."></textarea>
-    <p class="hint">Leave a blank line between paragraphs. Start a line with <strong>#</strong> to make it a heading.</p>
+    <p class="hint">Blank line = new paragraph. <strong># Title</strong>, <strong>## Section</strong>, <strong>&gt; scripture</strong> (indented), and <strong>[notes]</strong> you don't read aloud (shown small, skipped by the voice tracking).</p>
   </div>
   <div class="dlg-foot">
     <button id="openFileBtn" class="btn">Open .txt file</button>
@@ -448,6 +539,11 @@
     <button class="close-x" data-close aria-label="Close">&times;</button>
   </div>
   <div class="dlg-body">
+    <div class="field check">
+      <input id="cameraMode" type="checkbox">
+      <label for="cameraMode"><strong>Camera mode</strong> (C): while reading, hide the controls and keep the text high and narrow, close to the webcam</label>
+    </div>
+    <p class="hint camera-hint">In camera mode, the column width and reading line below are saved separately from your normal ones. Move the mouse to show the controls.</p>
     <div class="field">
       <label for="fontSize">Text size</label>
       <input id="fontSize" type="range" min="20" max="96" step="2">
@@ -460,7 +556,7 @@
     </div>
     <div class="field">
       <label for="linePos">Reading line</label>
-      <input id="linePos" type="range" min="15" max="60" step="1">
+      <input id="linePos" type="range" min="10" max="60" step="1">
       <output id="linePosOut"></output>
     </div>
     <div class="field">
@@ -492,6 +588,10 @@
       <input id="showHeard" type="checkbox">
       <label for="showHeard">Show what the microphone hears</label>
     </div>
+    <div class="field check">
+      <input id="cameraClock" type="checkbox">
+      <label for="cameraClock">Show a small clock in the corner in camera mode</label>
+    </div>
 
     <h3>Keyboard shortcuts</h3>
     <table class="keys">
@@ -500,7 +600,9 @@
       <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>Move to the previous or next line</td></tr>
       <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Previous or next line (works with presentation clickers)</td></tr>
       <tr><td><kbd>B</kbd></td><td>Start or pause listening (a clicker's "blank screen" button)</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Previous or next section</td></tr>
       <tr><td><kbd>Home</kbd></td><td>Go back to the beginning</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Camera mode on or off</td></tr>
       <tr><td><kbd>+</kbd> <kbd>&minus;</kbd></td><td>Bigger or smaller text</td></tr>
       <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
       <tr><td><kbd>E</kbd> / <kbd>S</kbd></td><td>Edit text / Settings</td></tr>
@@ -508,6 +610,7 @@
     </table>
     <p class="hint">Privacy: Chrome's speech recognition sends your audio to Google's speech service, so it needs an internet connection. Your text and settings stay in this browser. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
     <p class="hint">Tracking trouble? Open this page with <strong>?debug</strong> at the end of its address, read for a minute, then press <strong>Download session log</strong> and share the file.</p>
+    <p class="hint">Speech Scroll <span id="versionText"></span></p>
   </div>
 </dialog>
 
@@ -515,48 +618,93 @@
 (() => {
   'use strict';
 
+  // Sections of this script, in order (search for the banner comments):
+  //   Config & storage · Debug session log · DOM · Word normalisation & fuzzy matching ·
+  //   Rendering the text · Position tracking · Scrolling · Camera mode · Speech recognition ·
+  //   Time & pace · Banner · Settings · Sections menu · Editing text · Navigation · Start up
+  // Project brief, decisions and roadmap: handoff/PROJECT_BRIEF.md. Tests: tests/ (npm test).
+
   // ---------------------------------------------------------------------------
   // Config & storage
   // ---------------------------------------------------------------------------
+  const APP_VERSION = '1.1.0';  // bump on every release; shown in Settings and in debug logs
+
+  // Tracking and timing knobs, in one place. Change these only with evidence from real
+  // ?debug logs (see tests/replay-log.js), and re-run the tests afterwards.
+  const TUNING = {
+    LOOKAHEAD: 20,        // how many words ahead to look for the next spoken word
+    RELOCATE_RANGE: 400,  // how far ahead to search when the reader seems lost
+    REREAD_RANGE: 200,    // how far back to search when the reader goes back to re-read
+    LOST_AFTER: 8,        // unmatched words in a row before saying "Lost you" (on-track noisy reading reached 7)
+    FOLLOW_PAUSE: 3000,   // ms to leave the page alone after the reader scrolls by hand
+    QUIET_WARN: 10000,    // ms without any result before suggesting a microphone check
+    MAX_NET_RETRIES: 4,   // network errors in a row before giving up
+    DEFAULT_WPM: 130,     // assumed speaking pace until we've measured the reader's own
+    PACE_WINDOW: 180000,  // ms of recent listening used to measure pace
+    PEEK_TIME: 3000       // ms the toolbar stays visible after a mouse move in camera mode
+  };
+  const { LOOKAHEAD, RELOCATE_RANGE, REREAD_RANGE, LOST_AFTER, FOLLOW_PAUSE, QUIET_WARN, MAX_NET_RETRIES } = TUNING;
+
+  // Saved data lives in localStorage under STORE_KEY as { schema, text, settings, pos, seenMicHint }.
+  // To change its shape later: bump SCHEMA and add a step to migrate() that upgrades older data.
   const STORE_KEY = 'speechScroll.v2';
-  const LOOKAHEAD = 20;         // how many words ahead to look for the next spoken word
-  const RELOCATE_RANGE = 400;   // how far ahead to search when the reader seems lost
-  const REREAD_RANGE = 200;     // how far back to search when the reader goes back to re-read
-  const FOLLOW_PAUSE = 3000;    // ms to leave the page alone after the reader scrolls by hand
-  const DEFAULTS = { fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true };
+  const SCHEMA = 2;
+  const DEFAULTS = {
+    fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true,
+    cameraMode: false, cameraWidth: 26, cameraLinePos: 14, cameraClock: true
+  };
 
   const SAMPLE = `# Welcome to Speech Scroll
+
+## Reading
 
 Press the Start button, allow microphone access, and read this text out loud. The highlighted word shows where the app thinks you are, and the page scrolls to keep your place on the reading line.
 
 Speak at your normal pace. The app listens for the words on the page, so it keeps up when you read faster and waits when you stop. If you cough, pause, or say something that isn't in the text, it holds its place until you carry on.
 
+[This is a note. Notes in square brackets are shown small and you don't read them aloud.]
+
 You can skip a few words or even a sentence, or go back and read a sentence again, and it will find you after you read a short phrase. If it ever loses track, click any word to move the highlight there, or use the arrow keys to nudge it.
 
-# Your own text
+## Your own text
 
-To read something else, choose Edit text, paste your script, and press Use this text. You can also open a plain text file. A blank line starts a new paragraph, and a line starting with a hash sign becomes a heading.
+To read something else, choose Edit text, paste your script, and press Use this text. You can also open a plain text file. A blank line starts a new paragraph. A line starting with one hash sign is the title, and two hash signs start a section.
+
+> Lines starting with a greater-than sign are shown indented, for scripture or quotations you read aloud.
 
 Your text, settings and place are remembered in this browser, so you can close the page and pick up where you left off.
 
-# Settings
+## Recording
 
-Open Settings to change the text size, the width of the column, and where the reading line sits on the screen. You can also choose the language you are reading in and switch between light and dark themes.
+Turn on camera mode with the C key to keep the text high and narrow, close to your webcam, with the controls hidden while you read. Use the Sections button, or the square bracket keys, to jump between sections.
 
 Press the space bar to start or pause listening. Press F for full screen, and use the plus and minus keys to change the text size.
 
 Happy reading!`;
 
-  const RANGES = { fontSize: [20, 96], width: [20, 90], linePos: [15, 60] };
+  const RANGES = {
+    fontSize: [20, 96], width: [20, 90], linePos: [10, 60], cameraWidth: [20, 90], cameraLinePos: [10, 60]
+  };
   const LANGS = [...document.querySelectorAll('#lang option')].map((o) => o.value);
 
   function loadStore() {
     try {
       const data = JSON.parse(localStorage.getItem(STORE_KEY));
-      return data && typeof data === 'object' ? data : {};
+      return data && typeof data === 'object' ? migrate(data) : {};
     } catch (e) {
       return {};
     }
+  }
+
+  // Upgrade data saved by older versions, one schema step at a time.
+  function migrate(data) {
+    const version = Number.isInteger(data.schema) ? data.schema : 1;
+    if (version < 2) {
+      // v1.1.0 only added settings; cleanSettings() fills in their defaults. Nothing to move.
+    }
+    // Add later steps here, oldest first, e.g.
+    //   if (version < 3) data.settings.newName = data.settings.oldName;
+    return data;
   }
 
   // Ignore saved values of the wrong type or out of range rather than rendering a broken page.
@@ -599,32 +747,67 @@ Happy reading!`;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(STORE_KEY, JSON.stringify({ text, settings, pos, seenMicHint }));
+        localStorage.setItem(STORE_KEY, JSON.stringify({ schema: SCHEMA, text, settings, pos, seenMicHint }));
       } catch (e) { /* storage unavailable: settings just won't persist */ }
     }, 400);
   }
 
   // ---------------------------------------------------------------------------
   // Debug session log (open the page with ?debug): records what Chrome heard so a
-  // real read-through can be replayed and used to tune the tracking.
+  // real read-through can be replayed (tests/replay-log.js) and used to tune the tracking.
+  // Each 'result' event holds the results from Chrome's resultIndex onward and the
+  // position *after* the event was processed.
   // ---------------------------------------------------------------------------
   const DEBUG = /\bdebug\b/i.test(location.search + location.hash);
+  const LOG_CAP = 60000;        // ~90 min of speech produces roughly 20-30k result events
+  const LOG_EXTRA = 5000;       // room kept for important events after the cap is hit
   const debugLog = [];
+  let logTruncatedAt = null;    // time results stopped being recorded, if the cap was hit
+  let lastLoggedResult = '';
+  let logUnsaved = false;
+
   function logEvent(type, data) {
-    if (!DEBUG || debugLog.length >= 5000) return;
+    if (!DEBUG) return;
+    if (type === 'result') {
+      const key = JSON.stringify(data);
+      if (key === lastLoggedResult) return; // Chrome often repeats an identical event
+      lastLoggedResult = key;
+    }
+    if (debugLog.length >= LOG_CAP && (type === 'result' || debugLog.length >= LOG_CAP + LOG_EXTRA)) {
+      if (logTruncatedAt === null) logTruncatedAt = Math.round(performance.now());
+      return;
+    }
     debugLog.push(Object.assign({ t: Math.round(performance.now()), type, pos }, data));
+    logUnsaved = true;
+    if (debugLog.length % 25 === 1) updateDebugTitle();
   }
+
+  function updateDebugTitle() {
+    debugBtn.title = `Download a log of what Chrome heard (${debugLog.length} events` +
+      (logTruncatedAt !== null ? ', full: later results not recorded' : '') + ')';
+  }
+
   function downloadLog() {
     const blob = new Blob([JSON.stringify({
-      app: 'speech-scroll', saved: new Date().toISOString(), userAgent: navigator.userAgent,
-      lang: settings.lang, text, events: debugLog
-    }, null, 1)], { type: 'application/json' });
+      app: 'speech-scroll', version: APP_VERSION, saved: new Date().toISOString(),
+      userAgent: navigator.userAgent, lang: settings.lang, settings,
+      truncatedAt: logTruncatedAt, text, events: debugLog
+    })], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'speech-scroll-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    logUnsaved = false;
   }
+
+  // Don't lose a long recording by closing the window before downloading it.
+  window.addEventListener('beforeunload', (e) => {
+    if (DEBUG && logUnsaved && debugLog.length > 20) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // DOM
@@ -647,6 +830,10 @@ Happy reading!`;
   const settingsDlg = $('settingsDlg');
   const backBtn = $('backBtn');
   const debugBtn = $('debugBtn');
+  const sectionsBtn = $('sectionsBtn');
+  const sectionsMenu = $('sectionsMenu');
+  const clock = $('clock');
+  const cornerClock = $('cornerClock');
 
   const MIC_ICON = micIcon.innerHTML;
   const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
@@ -713,23 +900,38 @@ Happy reading!`;
   let spans = [];
   let words = [];
 
+  // Sermon text format (see handoff/SERMON_FORMAT.md):
+  //   "# Title"  "## Section"  blank line = new paragraph  "> scripture"  "[note, not read aloud]"
+  // sections[] lists the headings for the Sections menu: { title, level (1 title, 2 section), span }.
+  let sections = [];
+
+  function parseBlocks(source) {
+    const blocks = [];
+    let block = null;
+    for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
+      const line = raw.trim();
+      const heading = /^(#{1,6})\s+/.exec(line);
+      const quote = /^>\s?/.exec(line);
+      if (!line) {
+        block = null;
+      } else if (heading) {
+        block = null;
+        blocks.push({ tag: heading[1].length === 1 ? 'h1' : 'h2', lines: [line.slice(heading[0].length)] });
+      } else {
+        const tag = quote ? 'blockquote' : 'p';
+        if (!block || block.tag !== tag) blocks.push(block = { tag, lines: [] });
+        block.lines.push(quote ? line.slice(quote[0].length) : line);
+      }
+    }
+    return blocks;
+  }
+
   function render() {
     textEl.textContent = '';
     spans = [];
     words = [];
-    // A "# " line is always its own heading; other lines group into paragraphs at blank lines.
-    const blocks = [];
-    let para = null;
-    for (const raw of text.replace(/\r\n?/g, '\n').split('\n')) {
-      const line = raw.trim();
-      const heading = /^#{1,6}\s+/.exec(line);
-      if (!line || heading) para = null;
-      if (heading) blocks.push({ tag: 'h2', lines: [line.slice(heading[0].length)] });
-      else if (line) {
-        if (!para) blocks.push(para = { tag: 'p', lines: [] });
-        para.lines.push(line);
-      }
-    }
+    sections = [];
+    const blocks = parseBlocks(text);
 
     if (!blocks.length) {
       const p = document.createElement('p');
@@ -740,25 +942,17 @@ Happy reading!`;
 
     for (const block of blocks) {
       const el = document.createElement(block.tag);
-
+      const firstSpan = spans.length;
+      let inNote = false; // a [note] may continue onto the next line, but never past its block
       block.lines.forEach((line, li) => {
         if (li) el.appendChild(document.createElement('br'));
-        for (const part of line.split(/(\s+)/)) {
-          if (!part) continue;
-          if (/^\s+$/.test(part)) {
-            el.appendChild(document.createTextNode(' '));
-            continue;
-          }
-          const span = document.createElement('span');
-          span.className = 'w';
-          span.textContent = part;
-          span.dataset.s = spans.length;
-          const n = normWords(part);
-          spans.push({ el: span, first: n.length ? words.length : -1 });
-          for (const w of n) words.push({ n: w, span: spans.length - 1 });
-          el.appendChild(span);
-        }
+        inNote = appendLine(el, line, inNote);
       });
+      if (block.tag === 'h1' || block.tag === 'h2') {
+        const title = block.lines.join(' ').replace(/\[[^\]]*\]?/g, '').trim();
+        sections.push({ title: title || 'Untitled', level: block.tag === 'h1' ? 1 : 2, span: firstSpan });
+      }
+      if (spans.length === firstSpan && el.querySelector('.note')) el.classList.add('note-only');
       textEl.appendChild(el);
     }
 
@@ -767,6 +961,55 @@ Happy reading!`;
     for (let s = 0; s < shownSpan; s++) spans[s].el.classList.add('read');
     if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
     updateProgress();
+    updateSectionsButton();
+  }
+
+  // Adds one line of a block: words become trackable spans, [notes] become plain faded text.
+  // Returns whether a note is still open at the end of the line.
+  function appendLine(el, line, inNote) {
+    let buf = '';
+    for (const ch of line) {
+      if (!inNote && ch === '[') {
+        appendWords(el, buf);
+        buf = '[';
+        inNote = true;
+      } else if (inNote && ch === ']') {
+        appendNote(el, buf + ']');
+        buf = '';
+        inNote = false;
+      } else {
+        buf += ch;
+      }
+    }
+    if (inNote) appendNote(el, buf);
+    else appendWords(el, buf);
+    return inNote;
+  }
+
+  function appendNote(el, note) {
+    if (!note) return;
+    const span = document.createElement('span');
+    span.className = 'note';
+    span.textContent = note;
+    el.appendChild(span);
+  }
+
+  function appendWords(el, str) {
+    for (const part of str.split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) {
+        el.appendChild(document.createTextNode(' '));
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = 'w';
+      span.textContent = part;
+      span.dataset.s = spans.length;
+      const n = normWords(part);
+      spans.push({ el: span, first: n.length ? words.length : -1 });
+      for (const w of n) words.push({ n: w, span: spans.length - 1 });
+      el.appendChild(span);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -776,7 +1019,6 @@ Happy reading!`;
   let recent = [];     // last few spoken (normalised) words, for context
   let misses = 0;      // spoken words in a row that didn't match anything nearby
   let lost = false;    // showing the "lost you" warning
-  const LOST_AFTER = 8; // misses before we say so (noisy but on-track reading can reach 7)
 
   const spanAt = (i) => (i < words.length ? words[i].span : spans.length);
 
@@ -808,6 +1050,7 @@ Happy reading!`;
       setLost(false);
       logEvent('jump', {});
     }
+    notePace(manual);
     // After a hand scroll, give the reader a moment to look around before following again.
     if (manual || Date.now() - lastManualScroll > FOLLOW_PAUSE) scrollToCurrent(false);
     else checkPlaceVisible();
@@ -935,7 +1178,7 @@ Happy reading!`;
     const el = spans[Math.min(shownSpan, spans.length - 1)].el;
     const rr = reader.getBoundingClientRect();
     const er = el.getBoundingClientRect();
-    let target = reader.scrollTop + (er.top - rr.top) + er.height / 2 - reader.clientHeight * (settings.linePos / 100);
+    let target = reader.scrollTop + (er.top - rr.top) + er.height / 2 - reader.clientHeight * (readingLine() / 100);
     target = Math.max(0, Math.min(target, reader.scrollHeight - reader.clientHeight));
 
     if (instant) {
@@ -1006,9 +1249,13 @@ Happy reading!`;
     scrollToCurrent(false);
   }
 
+  // Camera mode keeps its own column width and reading line (high, close to the webcam).
+  const readingLine = () => (settings.cameraMode ? settings.cameraLinePos : settings.linePos);
+  const columnWidth = () => (settings.cameraMode ? settings.cameraWidth : settings.width);
+
   function layout() {
     const h = reader.clientHeight;
-    const line = settings.linePos / 100;
+    const line = readingLine() / 100;
     const lineHeight = settings.fontSize * 1.5;
     textEl.style.paddingTop = Math.round(h * line) + 'px';
     textEl.style.paddingBottom = Math.round(h * (1 - line)) + 'px';
@@ -1020,6 +1267,42 @@ Happy reading!`;
     const pct = words.length ? (pos / words.length) * 100 : 0;
     progress.style.width = pct + '%';
     progress.title = `Word ${Math.min(pos + 1, words.length)} of ${words.length}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Camera mode
+  // ---------------------------------------------------------------------------
+  // While listening in camera mode the controls fade away and the text uses the full window.
+  // A real mouse move (or Tab/Escape) brings the toolbar back for a few seconds; clicker keys don't,
+  // so pressing PageDown while recording never flashes the controls.
+  let peekTimer = 0;
+  let lastMouse = '';
+
+  function syncCamera(instant) {
+    document.body.classList.toggle('camera', settings.cameraMode);
+    layout();
+    scrollToCurrent(instant);
+    updateCornerClock();
+  }
+
+  function peek() {
+    if (!settings.cameraMode || !wantListening) return;
+    document.body.classList.add('peek');
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(() => document.body.classList.remove('peek'), TUNING.PEEK_TIME);
+  }
+  document.addEventListener('mousemove', (e) => {
+    const at = e.screenX + ',' + e.screenY; // ignore synthetic moves caused by scrolling
+    if (at !== lastMouse) {
+      lastMouse = at;
+      peek();
+    }
+  });
+  document.addEventListener('touchstart', peek, { passive: true });
+
+  function toggleCamera() {
+    settings.cameraMode = !settings.cameraMode;
+    applySettings();
   }
 
   // ---------------------------------------------------------------------------
@@ -1038,8 +1321,6 @@ Happy reading!`;
   let consumed = 0;
   let heardLog = [];
 
-  const QUIET_WARN = 10000;  // ms without any result before suggesting a microphone check
-  const MAX_NET_RETRIES = 4;
 
   function createRecognizer() {
     rec = new SR();
@@ -1064,14 +1345,14 @@ Happy reading!`;
     rec.onresult = (e) => {
       if (!wantListening) return;
       const res = e.results;
-      logEvent('result', {
+      const logged = DEBUG && {
         ri: e.resultIndex,
         n: res.length,
         r: Array.from({ length: res.length - e.resultIndex }, (_, k) => {
           const r = res[e.resultIndex + k];
           return { t: r[0].transcript, f: r.isFinal };
         })
-      });
+      };
       heardSomething();
 
       while (finalUpTo < res.length && res[finalUpTo].isFinal) {
@@ -1093,6 +1374,8 @@ Happy reading!`;
       }
       consumed = all.length;
       showHeard(interim);
+      if (logged) logEvent('result', logged); // logged with the position after this event
+      tickClock();
 
       // Finish only once Chrome has settled on its final words, not on an early guess.
       if (atEnd() && !interim.length) finish();
@@ -1201,6 +1484,8 @@ Happy reading!`;
     rec.lang = settings.lang;
     wantListening = true;
     document.body.classList.add('listening');
+    startClock();
+    syncCamera(false);
     restartTimes = [];
     netFails = 0;
     setStatus('starting');
@@ -1214,7 +1499,9 @@ Happy reading!`;
 
   function stopListening() {
     wantListening = false;
-    document.body.classList.remove('listening');
+    document.body.classList.remove('listening', 'peek');
+    stopClock();
+    syncCamera(false);
     if (rec) {
       try { rec.abort(); } catch (err) { /* not running */ }
     }
@@ -1292,6 +1579,90 @@ Happy reading!`;
   }
 
   // ---------------------------------------------------------------------------
+  // Time & pace
+  // ---------------------------------------------------------------------------
+  // Elapsed time counts only while listening. Pace = words advanced by voice over the last few
+  // minutes of listening (manual jumps excluded); until there's enough data, assume DEFAULT_WPM.
+  let elapsedMs = 0;
+  let listenStart = null;
+  let clockTimer = 0;
+  let paceSamples = [];   // { t: listening ms, pos }
+
+  const listeningMs = () => elapsedMs + (listenStart !== null ? performance.now() - listenStart : 0);
+
+  function startClock() {
+    if (listenStart === null) listenStart = performance.now();
+    paceSamples.push({ t: listeningMs(), pos });
+    clearInterval(clockTimer);
+    clockTimer = setInterval(tickClock, 1000);
+  }
+
+  function stopClock() {
+    elapsedMs = listeningMs();
+    listenStart = null;
+    clearInterval(clockTimer);
+    tickClock();
+  }
+
+  function resetClock() {
+    elapsedMs = 0;
+    if (listenStart !== null) listenStart = performance.now();
+    paceSamples = [{ t: 0, pos }];
+    tickClock();
+  }
+
+  function notePace(manual) {
+    if (!wantListening) return;
+    const t = listeningMs();
+    if (manual) paceSamples = [];  // a jump isn't reading: measure again from here
+    paceSamples.push({ t, pos });
+    while (paceSamples.length > 2 && paceSamples[1].t < t - TUNING.PACE_WINDOW) paceSamples.shift();
+  }
+
+  // Returns [words per minute, measured?]
+  function pace() {
+    const first = paceSamples[0];
+    const last = paceSamples[paceSamples.length - 1];
+    if (first && last) {
+      const minutes = (last.t - first.t) / 60000;
+      const advanced = last.pos - first.pos;
+      if (minutes >= 0.5 && advanced >= 20) return [advanced / minutes, true];
+    }
+    return [TUNING.DEFAULT_WPM, false];
+  }
+
+  function formatTime(ms) {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = String(total % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  }
+
+  function timeLeftText() {
+    if (atEnd()) return 'done';
+    const minutes = (words.length - pos) / pace()[0];
+    return minutes < 1 ? 'under a minute left' : `about ${Math.round(minutes)} min left`;
+  }
+
+  function tickClock() {
+    clock.hidden = !words.length;
+    if (!words.length) return;
+    const [wpm, measured] = pace();
+    $('clockElapsed').textContent = formatTime(listeningMs());
+    $('clockLeft').textContent = ' · ' + timeLeftText();
+    clock.title = measured
+      ? `Your pace: ${Math.round(wpm)} words/min`
+      : `Estimated at ${TUNING.DEFAULT_WPM} words/min until you've read for a little while`;
+    updateCornerClock();
+  }
+
+  function updateCornerClock() {
+    cornerClock.hidden = !(settings.cameraMode && settings.cameraClock && wantListening && words.length);
+    if (!cornerClock.hidden) cornerClock.textContent = formatTime(listeningMs()) + ' · ' + timeLeftText();
+  }
+
+  // ---------------------------------------------------------------------------
   // Banner
   // ---------------------------------------------------------------------------
   let bannerKind = '';   // lets temporary hints (e.g. 'quiet') clear themselves when no longer true
@@ -1310,37 +1681,47 @@ Happy reading!`;
   // ---------------------------------------------------------------------------
   // Settings
   // ---------------------------------------------------------------------------
-  const controls = {
-    fontSize: { el: $('fontSize'), out: $('fontSizeOut'), fmt: (v) => v + 'px' },
-    width: { el: $('width'), out: $('widthOut'), fmt: (v) => v + 'ch' },
-    linePos: { el: $('linePos'), out: $('linePosOut'), fmt: (v) => v + '%' }
-  };
+  // The width and reading-line sliders edit the camera-mode values while camera mode is on.
+  const controls = [
+    { el: $('fontSize'), out: $('fontSizeOut'), fmt: (v) => v + 'px', key: () => 'fontSize' },
+    { el: $('width'), out: $('widthOut'), fmt: (v) => v + 'ch', key: () => (settings.cameraMode ? 'cameraWidth' : 'width') },
+    { el: $('linePos'), out: $('linePosOut'), fmt: (v) => v + '%', key: () => (settings.cameraMode ? 'cameraLinePos' : 'linePos') }
+  ];
 
   function applySettings() {
     const root = document.documentElement;
     root.style.setProperty('--fs', settings.fontSize + 'px');
-    root.style.setProperty('--measure', settings.width + 'ch');
+    root.style.setProperty('--measure', columnWidth() + 'ch');
     if (settings.theme === 'auto') root.removeAttribute('data-theme');
     else root.setAttribute('data-theme', settings.theme);
     if (!settings.showHeard) setHeardVisible(false);
-    for (const [key, c] of Object.entries(controls)) {
-      c.el.value = settings[key];
-      c.out.textContent = c.fmt(settings[key]);
+    for (const c of controls) {
+      c.el.value = settings[c.key()];
+      c.out.textContent = c.fmt(settings[c.key()]);
     }
     $('lang').value = settings.lang;
     $('theme').value = settings.theme;
     $('showHeard').checked = settings.showHeard;
-    layout();
-    scrollToCurrent(true);
+    $('cameraMode').checked = settings.cameraMode;
+    $('cameraClock').checked = settings.cameraClock;
+    syncCamera(true);
     saveSoon();
   }
 
-  for (const [key, c] of Object.entries(controls)) {
+  for (const c of controls) {
     c.el.addEventListener('input', () => {
-      settings[key] = Number(c.el.value);
+      settings[c.key()] = Number(c.el.value);
       applySettings();
     });
   }
+  $('cameraMode').addEventListener('change', (e) => {
+    settings.cameraMode = e.target.checked;
+    applySettings();
+  });
+  $('cameraClock').addEventListener('change', (e) => {
+    settings.cameraClock = e.target.checked;
+    applySettings();
+  });
   $('theme').addEventListener('change', (e) => {
     settings.theme = e.target.value;
     applySettings();
@@ -1363,6 +1744,87 @@ Happy reading!`;
     settings.fontSize = Math.max(20, Math.min(96, settings.fontSize + delta));
     applySettings();
   }
+
+  // ---------------------------------------------------------------------------
+  // Sections menu
+  // ---------------------------------------------------------------------------
+  // Lists the "# " title and "## " sections so a long sermon can be recorded in takes.
+  function updateSectionsButton() {
+    sectionsBtn.hidden = !sections.some((sec) => sec.level === 2);
+    if (sectionsBtn.hidden) closeSections(false);
+  }
+
+  // Index into sections[] of the section containing the current word, or -1 before the first.
+  function currentSection() {
+    let found = -1;
+    sections.forEach((sec, i) => { if (sec.span <= shownSpan) found = i; });
+    return found;
+  }
+
+  function jumpToSection(i) {
+    if (i >= 0 && i < sections.length) setPos(firstWordFrom(sections[i].span), true);
+  }
+
+  // dir > 0: next section. dir < 0: start of this section, or the previous one if already there.
+  function stepSection(dir) {
+    const cur = currentSection();
+    if (dir > 0) {
+      const next = sections.findIndex((sec) => sec.span > shownSpan);
+      if (next >= 0) jumpToSection(next);
+    } else if (cur >= 0 && firstWordFrom(sections[cur].span) < pos) {
+      jumpToSection(cur);
+    } else {
+      jumpToSection(cur - 1);
+    }
+  }
+
+  function openSections() {
+    const cur = currentSection();
+    sectionsMenu.replaceChildren(...sections.map((sec, i) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      item.className = sec.level === 1 ? 'title' : 'section';
+      item.textContent = sec.title;
+      if (i === cur) item.setAttribute('aria-current', 'true');
+      item.addEventListener('click', () => {
+        closeSections(false);
+        jumpToSection(i);
+      });
+      return item;
+    }));
+    const r = sectionsBtn.getBoundingClientRect();
+    sectionsMenu.style.top = Math.round(r.bottom + 6) + 'px';
+    sectionsMenu.style.right = Math.max(16, Math.round(window.innerWidth - r.right)) + 'px';
+    sectionsMenu.hidden = false;
+    sectionsBtn.setAttribute('aria-expanded', 'true');
+    const items = sectionsMenu.querySelectorAll('button');
+    (items[cur] || items[0]).focus();
+  }
+
+  function closeSections(refocus) {
+    if (sectionsMenu.hidden) return;
+    sectionsMenu.hidden = true;
+    sectionsBtn.setAttribute('aria-expanded', 'false');
+    if (refocus) sectionsBtn.focus();
+  }
+
+  sectionsBtn.addEventListener('click', () => (sectionsMenu.hidden ? openSections() : closeSections(false)));
+  sectionsMenu.addEventListener('keydown', (e) => {
+    const items = [...sectionsMenu.querySelectorAll('button')];
+    const at = items.indexOf(document.activeElement);
+    const moves = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 };
+    if (e.key in moves) {
+      e.preventDefault();
+      items[Math.max(0, Math.min(items.length - 1, moves[e.key]))].focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.preventDefault();
+      closeSections(true);
+    }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!sectionsMenu.hidden && !sectionsMenu.contains(e.target) && !sectionsBtn.contains(e.target)) closeSections(false);
+  });
 
   // ---------------------------------------------------------------------------
   // Editing text
@@ -1410,6 +1872,8 @@ Happy reading!`;
     render();
     layout();
     setPos(replacedWhole ? 0 : placeAfterEdit(oldWords, oldPos), true);
+    if (replacedWhole) resetClock();
+    else tickClock();
     scrollToCurrent(true);
   });
   $('cancelBtn').addEventListener('click', () => {
@@ -1491,7 +1955,11 @@ Happy reading!`;
     backToPlace();
     backBtn.blur();
   });
-  $('restartBtn').addEventListener('click', () => setPos(0, true));
+  function restart() {
+    setPos(0, true);
+    resetClock();
+  }
+  $('restartBtn').addEventListener('click', restart);
   $('editBtn').addEventListener('click', openEditor);
   $('settingsBtn').addEventListener('click', () => settingsDlg.showModal());
   $('fullBtn').addEventListener('click', toggleFullscreen);
@@ -1501,8 +1969,9 @@ Happy reading!`;
   }
 
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' || e.key === 'Escape') peek();
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    if (document.querySelector('dialog[open]')) return;
+    if (document.querySelector('dialog[open]') || !sectionsMenu.hidden) return;
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     // Let Space/Enter press a button that was reached with Tab.
     if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button, a')) return;
@@ -1518,7 +1987,10 @@ Happy reading!`;
       PageUp: () => stepLine(-1),
       b: toggleListening,
       '.': toggleListening,
-      Home: () => setPos(0, true),
+      Home: restart,
+      '[': () => stepSection(-1),
+      ']': () => stepSection(1),
+      c: toggleCamera,
       '+': () => changeFontSize(4),
       '=': () => changeFontSize(4),
       '-': () => changeFontSize(-4),
@@ -1547,6 +2019,8 @@ Happy reading!`;
   // ---------------------------------------------------------------------------
   render();
   applySettings();
+  tickClock();
+  $('versionText').textContent = 'v' + APP_VERSION;
 
   // When served from a web address (not opened as a local file), Chrome can install the page
   // as an app with its own window and icon. The manifest is only linked there, because
@@ -1574,6 +2048,16 @@ Happy reading!`;
   window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
 
   if (DEBUG) {
+    // Read-only handle for tools/tests (tests/replay-log.js) and the browser console.
+    window.speechScroll = {
+      version: APP_VERSION,
+      get pos() { return pos; },
+      get wordCount() { return words.length; },
+      jumpTo: (i) => setPos(i, true),
+      context: (i, before = 4, after = 4) => spans
+        .slice(Math.max(0, spanAt(Math.max(0, i - before))), spanAt(Math.min(words.length, i + after)))
+        .map((sp, k, all) => (all[k] === spans[spanAt(i)] ? '▶' : '') + sp.el.textContent).join(' ')
+    };
     debugBtn.hidden = false;
     debugBtn.addEventListener('click', downloadLog);
     showBanner('Debug mode: read for a minute or two as normal, then press "Download session log" and share the file.', true);

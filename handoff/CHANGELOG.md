@@ -12,3 +12,10 @@ Add one line per change, newest at the bottom: `vX.Y (date): what changed`.
   - **Editor:** keeps drafts and your place after an edit, and headings render correctly.
   - **Other:** clicker keys (PgUp/PgDn/B), a `?debug` session log, the browser's own language by default, a microphone and privacy hint, and automated tests (`tests/`).
 - **v1.0.1 (Oct 2026):** can be installed as an app from its GitHub Pages address. Adds an app manifest and icons, an "Install app" button, and a root page that redirects to the app. The local file works as before.
+- **v1.1.0 (Oct 2026):** sermon features and groundwork for future updates:
+  - **Camera mode (C):** controls hide while reading, and the text sits high and narrow under the webcam.
+  - **Sermon text format:** `#` title, `##` sections, `>` scripture and `[notes]` that aren't read aloud.
+  - **Sections menu**, plus `[` and `]` to move between sections.
+  - **Time display:** elapsed time and time left, from your own pace.
+  - **Debug log** long enough for a full sermon.
+  - **Groundwork:** a version shown in Settings, all tracking settings in one place, versioned saved data, `npm test`, automatic tests on GitHub, and a replay tool for real logs.

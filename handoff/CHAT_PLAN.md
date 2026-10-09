@@ -1,121 +1,21 @@
 # Chat plan
 
-Do these in order, with **one new chat per task**. For every chat:
+**Already done (v1.1.0):** camera mode, the sermon text format, the section list, the time display, and a debug log for full sermons.
+
+Do the rest in order, with **one new chat per task**. For every chat:
 - **Attach** the latest `speech-scroll-app.html` and `PROJECT_BRIEF.md`, plus any extra file the task lists.
 - **Paste** the prompt for that chat.
 - **When it's done:**
   - Save the new file as a new version.
   - Run `TEST_CHECKLIST.md` and the task's own test steps.
   - Paste the changelog line into `CHANGELOG.md`.
+  - Publish the new version (see START_HERE.md).
 
-| # | Task | Size | Needs |
-|---|---|---|---|
-| 1 | Camera mode | Medium | — |
-| 2 | Sermon text format (`##`, `>`, `[notes]`) | Medium | `SERMON_FORMAT.md` |
-| 3 | Section list | Small | Chat 2 done |
-| 4 | Time display | Small | Chat 2 done |
-| 5 | Debug log long enough for a full sermon | Small | — |
-| R | **Real read-through with `?debug`** (no chat, you do this) | — | ideally after 1 and 5 |
-| 6 | Tune tracking from your real log | Medium | log file from R |
-| 7+ | Optional extras | — | only if R shows the need |
-
----
-
-## Chat 1: Camera mode
-
-**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`
-
-```
-Please read PROJECT_BRIEF.md first, then speech-scroll-app.html.
-
-Task: add a "Camera mode" for recording myself with the laptop webcam while reading.
-
-Requirements:
-1. A toggle in Settings ("Camera mode") and a keyboard shortcut C. Remember it in saved settings.
-2. In camera mode, use separate saved values for the reading line (default 14%) and column width (default 26ch), adjustable with the existing sliders while camera mode is on. Turning camera mode off restores my normal values.
-3. While listening in camera mode, hide the toolbar, progress bar, "heard" strip and any info banners, and let the text area use the full window height (recompute layout() so the reading line stays where it should). Error banners (microphone blocked, connection lost) must still show.
-4. Moving the mouse or pressing any key shows the toolbar again for 3 seconds; pausing shows it permanently.
-5. In camera mode, make the "Lost you" signal subtle: keep the amber left edge of the reading line but not the amber band across the text.
-6. Hide the mouse cursor over the text while listening in camera mode.
-Keep everything else unchanged. Follow the working rules in the brief (version bump to v1.1, changelog line, numbered test steps).
-```
-
----
-
-## Chat 2: Sermon text format
-
-**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`, `SERMON_FORMAT.md`
-
-```
-Please read PROJECT_BRIEF.md and SERMON_FORMAT.md first, then speech-scroll-app.html.
-
-Task: support the sermon text format in render(), exactly as SERMON_FORMAT.md describes.
-
-Requirements:
-1. "# " line = sermon title (render as <h1>, larger). "## " (or deeper) line = section heading (<h2>, with a data attribute marking it as a section, for a later section menu). Headings are still read aloud and followed.
-2. Consecutive lines starting with "> " form one scripture block (<blockquote>, indented, slightly different style in light and dark themes; keep line breaks). Words in it are followed by voice as normal.
-3. Text inside [square brackets] is a note: shown smaller, italic and faded, NOT added to words[] (its spans get first = -1), so tracking, arrow keys and progress skip it. Brackets can enclose several words, may span a line break inside a paragraph, and a paragraph can be entirely a note. An unmatched "[" must not swallow the rest of the sermon: end the note at the end of the paragraph.
-4. Update the editor hint text and the built-in SAMPLE to show the format briefly.
-5. Keep placeAfterEdit(), stepLine(), stepWord() and click-to-set-position working with the new elements.
-Version bump to v1.2, changelog line, numbered test steps (use sample-sermon.txt from the format doc as test text).
-```
-
----
-
-## Chat 3: Section list
-
-**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`
-
-```
-Please read PROJECT_BRIEF.md first, then speech-scroll-app.html.
-
-Task: add a section list so I can jump to any "## " section (useful when recording a long sermon in several takes).
-
-Requirements:
-1. A "Sections" toolbar button opening a small list of section titles (and the sermon title at the top). Clicking one moves my place to the section's first word (as a manual jump) and closes the list. The current section is marked.
-2. Keyboard: ] = next section, [ = previous section. Add them to the shortcuts table.
-3. Hide the button when the text has no sections. Works in camera mode (the toolbar reappears on mouse move).
-4. Accessible: the list is keyboard-navigable and closes with Escape.
-Version bump, changelog line, numbered test steps.
-```
-
----
-
-## Chat 4: Time display
-
-**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`
-
-```
-Please read PROJECT_BRIEF.md first, then speech-scroll-app.html.
-
-Task: show elapsed time and an estimate of time remaining, so I can pace a 45–90 minute sermon.
-
-Requirements:
-1. Elapsed time counts only while listening (pausing stops the clock). Reset it with Restart/Home, but not with other jumps.
-2. My pace (words per minute) = spoken words advanced during the last ~3 minutes of listening; until there is enough data, assume 130 wpm. Don't count notes (spans with first = -1) or manual jumps.
-3. Remaining time = words left / pace. Show "12:34 elapsed · about 31 min left" in the toolbar (compact on narrow screens). In camera mode while listening, show it only as a small, faint label in a bottom corner, and add a setting to turn that off.
-4. Hovering over the time shows the pace, e.g. "Your pace: 138 words/min".
-Version bump, changelog line, numbered test steps.
-```
-
----
-
-## Chat 5: Debug log long enough for a full sermon
-
-**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`
-
-```
-Please read PROJECT_BRIEF.md first, then speech-scroll-app.html.
-
-Task: make the ?debug session log practical for a 90-minute sermon.
-
-Requirements:
-1. Raise the 5,000-event cap so a 90-minute session fits (estimate the events per minute from the onresult logging and size it with margin), and skip logging a result event when its transcripts are identical to the previous event.
-2. If the cap is still reached, keep recording "lost", "jump", "error" and "end" events and note in the log that results were truncated.
-3. Include the settings and the app version in the downloaded file, and show the number of logged events in the button's tooltip.
-4. Ask before leaving the page (beforeunload) in debug mode if events were logged but never downloaded.
-Version bump, changelog line, numbered test steps.
-```
+| # | Task | Needs |
+|---|---|---|
+| R | **Real read-through with `?debug`** (no chat, you do this) | — |
+| 1 | Tune tracking from your real log | the log file from R |
+| 2+ | Optional extras | only if R or real use shows the need |
 
 ---
 
@@ -124,8 +24,8 @@ Version bump, changelog line, numbered test steps.
 1. **Open the app with `?debug` at the end of the address.** In Chrome's address bar, add it after `.html`,
    e.g. `file:///C:/Users/you/Documents/speech-scroll-app.html?debug`, then press Enter.
 2. **Load your test text:** open `sample-sermon.txt` or a real sermon through **Edit text → Open .txt file**.
-3. **Set up as you will for recording:** webcam, camera mode if done, your normal distance and voice.
-4. **Press Start and read for 5–10 minutes.** Please include:
+3. **Set up as you will for recording:** webcam, camera mode (press C), your normal distance and voice.
+4. **Press Start and read for 5–10 minutes.** (A full sermon also fits in the log.) Please include:
    - normal reading at your preaching pace, with pauses
    - one sentence you **skip**, and one sentence you **read twice**
    - **a repeated line for emphasis** that isn't written twice ("God is faithful... God is faithful!")
@@ -136,7 +36,7 @@ Version bump, changelog line, numbered test steps.
 
 ---
 
-## Chat 6: Tune tracking from the real log
+## Chat 1: Tune tracking from the real log
 
 **Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`, the **log file**, the **text you read** (if it isn't the sample)
 
@@ -153,7 +53,7 @@ Task:
 Version bump, changelog line, numbered test steps.
 ```
 
-*If the log is too big for the chat, use a shorter session (5 minutes) or split the file.*
+*If the log is too big for the chat, use a shorter session (5 minutes). A full-sermon log is better analysed in Claude Code, which can replay it with `npm run replay`.*
 
 ---
 
