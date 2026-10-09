@@ -16,14 +16,18 @@
   - The text is on the same screen, just below the webcam.
   - The microphone is the webcam's or laptop's built-in one.
 - **Sermons last 45–90 minutes**, about 6,000–13,000 words.
-- **The file is opened locally** (`file://`), not from a website.
+- **Two ways to run it:** opened locally (`file://`), or from GitHub Pages at <https://rafaellunajrb.github.io/your_first_code/> (branch `claude/speech-scroll-app-011CULQHxHxv7szv6fpvyDoF`, root folder),
+  installed from Chrome as an app with its own window.
 
 ## 2. Hard constraints
 
 - **One self-contained HTML file** (HTML + CSS + JS inline). No build step, no frameworks, no libraries, no CDNs.
 - **Target is desktop Google Chrome only.** It uses the Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`).
 - **Chrome's default (cloud) recognition sends audio to Google** and needs internet. The UI says so.
-- **Keep it working when opened as a local file.**
+- **Keep it working when opened as a local file** as well as from the web address.
+- **Web-only support files** (rarely change): `manifest.webmanifest`, `icons/`, `index.html` (redirects to the app) and `.nojekyll`.
+  The app links the manifest only when served over http(s), and shows an **Install app** button when Chrome offers installation.
+  The app itself stays one self-contained file. Never make it depend on other files to work.
 - **Plain, friendly wording in the UI.** The owner is not technical.
 
 ## 3. How it works (architecture map)

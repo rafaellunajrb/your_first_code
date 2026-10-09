@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-<!-- Speech Scroll v1.0 (voice-following teleprompter). Project brief and change plan: handoff/ folder. -->
+<!-- Speech Scroll v1.0.1 (voice-following teleprompter). Project brief and change plan: handoff/ folder. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Speech Scroll</title>
+<meta name="theme-color" content="#2f6fde">
+<link rel="icon" href="icons/icon-192.png">
 <style>
   :root {
     --bg: #f7f5f0;
@@ -380,6 +382,10 @@
     <span id="statusText" class="status-text">Not listening</span>
   </div>
   <div class="spacer"></div>
+  <button id="installBtn" class="btn" title="Install Speech Scroll as an app with its own window and icon" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 8v6M9 11l3 3 3-3M8 21h8"/></svg>
+    <span class="label">Install app</span>
+  </button>
   <button id="debugBtn" class="btn" title="Download a log of what Chrome heard, to help tune tracking" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
     <span class="label">Download session log</span>
@@ -1541,6 +1547,31 @@ Happy reading!`;
   // ---------------------------------------------------------------------------
   render();
   applySettings();
+
+  // When served from a web address (not opened as a local file), Chrome can install the page
+  // as an app with its own window and icon. The manifest is only linked there, because
+  // Chrome refuses to load it from file:// and would log an error.
+  if (location.protocol.startsWith('http')) {
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'manifest.webmanifest';
+    document.head.appendChild(link);
+  }
+  let installPrompt = null;
+  const installBtn = $('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
 
   if (DEBUG) {
     debugBtn.hidden = false;

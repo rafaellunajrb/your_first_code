@@ -11,3 +11,4 @@ Add one line per change, newest at the bottom: `vX.Y (date): what changed`.
   - **Reliability:** retries after network errors and restarts faster.
   - **Editor:** keeps drafts and your place after an edit, and headings render correctly.
   - **Other:** clicker keys (PgUp/PgDn/B), a `?debug` session log, the browser's own language by default, a microphone and privacy hint, and automated tests (`tests/`).
+- **v1.0.1 (Oct 2026):** can be installed as an app from its GitHub Pages address. Adds an app manifest and icons, an "Install app" button, and a root page that redirects to the app. The local file works as before.
