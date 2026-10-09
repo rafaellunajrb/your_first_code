@@ -15,7 +15,8 @@ Do the rest in order, with **one new chat per task**. For every chat:
 |---|---|---|
 | R | **Real read-through with `?debug`** (no chat, you do this) | — |
 | 1 | Tune tracking from your real log | the log file from R |
-| 2+ | Optional extras | only if R or real use shows the need |
+| 2 | Library backup (export and import) | — (can be done before R) |
+| 3+ | Optional extras | only if R or real use shows the need |
 
 ---
 
@@ -55,6 +56,26 @@ Version bump, changelog line, numbered test steps.
 ```
 
 *If the log is too big for the chat, use a shorter session (5 minutes). A full-sermon log is better analysed in Claude Code, which can replay it with `npm run replay`.*
+
+---
+
+## Chat 2: Library backup (export and import)
+
+**Attach:** `speech-scroll-app.html`, `PROJECT_BRIEF.md`
+
+```
+Please read PROJECT_BRIEF.md first, then speech-scroll-app.html.
+
+Task: my sermon library lives only in this browser. Add a backup so a browser reset or a new laptop doesn't lose it.
+
+Requirements:
+1. In the Sermons dialog, add "Export library", which downloads one .json file with every sermon's text, title, place and dates, plus my settings, and "Import library", which reads such a file.
+2. Import merges: it adds sermons whose text isn't already there, keeps existing ones, and tells me how many were added and skipped. It asks before replacing my settings.
+3. If the storage fills up partway through an import, stop cleanly and say which sermons didn't fit.
+4. Remind me gently to export when I haven't for 30 days and have 3 or more sermons: one small info banner, at most once a week.
+5. Keep the saved-data format (bump SCHEMA and add a migrate() step only if the shape changes).
+Version bump, changelog line, numbered test steps.
+```
 
 ---
 
