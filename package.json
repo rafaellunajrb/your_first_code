@@ -1,0 +1,14 @@
+{
+  "name": "speech-scroll",
+  "version": "1.2.0",
+  "private": true,
+  "description": "A voice-following teleprompter in a single HTML file (speech-scroll-app.html).",
+  "scripts": {
+    "test": "node tests/regression.js && node tests/features.js",
+    "replay": "node tests/replay-log.js",
+    "package": "python3 tools/build_handoff.py"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

@@ -1,0 +1,2634 @@
+<!DOCTYPE html>
+<!-- Speech Scroll v1.2.0 (voice-following teleprompter); the version also lives in APP_VERSION. Project brief and change plan: handoff/ folder. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech Scroll</title>
+<meta name="theme-color" content="#2f6fde">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #a3a097;
+    --subtle: #6b6962;
+    --border: #e3e0d8;
+    --hover: rgba(0, 0, 0, 0.05);
+    --accent: #2f6fde;
+    --accent-text: #ffffff;
+    --danger: #c73e3e;
+    --danger-bg: #c73e3e;
+    --warn: #c98a00;
+    --warn-line: rgba(232, 160, 0, 0.16);
+    --warn-edge: rgba(232, 160, 0, 0.9);
+    --quote-edge: rgba(47, 111, 222, 0.45);
+    --quote-bg: rgba(47, 111, 222, 0.05);
+    --ok: #1f9d55;
+    --hl: rgba(255, 204, 51, 0.55);
+    --line: rgba(47, 111, 222, 0.10);
+    --line-edge: rgba(47, 111, 222, 0.55);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    --fs: 40px;
+    --measure: 42ch;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121316;
+      --surface: #1b1d22;
+      --text: #ecebe7;
+      --muted: #5f626a;
+      --subtle: #9a9ca3;
+      --border: #2c2f36;
+      --hover: rgba(255, 255, 255, 0.06);
+      --accent: #6f9dff;
+      --accent-text: #0d1320;
+      --danger: #ff6b6b;
+      --danger-bg: #c94848;
+      --warn: #f2b33d;
+      --warn-line: rgba(242, 179, 61, 0.13);
+      --warn-edge: rgba(242, 179, 61, 0.85);
+      --quote-edge: rgba(111, 157, 255, 0.55);
+      --quote-bg: rgba(111, 157, 255, 0.06);
+      --ok: #4ad084;
+      --hl: rgba(255, 204, 51, 0.45);
+      --line: rgba(111, 157, 255, 0.09);
+      --line-edge: rgba(111, 157, 255, 0.6);
+      --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121316;
+    --surface: #1b1d22;
+    --text: #ecebe7;
+    --muted: #5f626a;
+    --subtle: #9a9ca3;
+    --border: #2c2f36;
+    --hover: rgba(255, 255, 255, 0.06);
+    --accent: #6f9dff;
+    --accent-text: #0d1320;
+    --danger: #ff6b6b;
+    --danger-bg: #c94848;
+    --warn: #f2b33d;
+    --warn-line: rgba(242, 179, 61, 0.13);
+    --warn-edge: rgba(242, 179, 61, 0.85);
+    --quote-edge: rgba(111, 157, 255, 0.55);
+    --quote-bg: rgba(111, 157, 255, 0.06);
+    --ok: #4ad084;
+    --hl: rgba(255, 204, 51, 0.45);
+    --line: rgba(111, 157, 255, 0.09);
+    --line-edge: rgba(111, 157, 255, 0.6);
+    --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+  }
+  .toolbar .spacer { flex: 1; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: transparent;
+    font-weight: 600;
+    min-width: 104px;
+    justify-content: center;
+  }
+  .btn.primary:hover { filter: brightness(1.08); background: var(--accent); }
+  .btn.primary.listening { background: var(--danger-bg); color: #fff; }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--subtle);
+    margin-left: 4px;
+    white-space: nowrap;
+    flex: none; /* the status matters more than the clock when space is short */
+  }
+  .status-text { overflow: hidden; text-overflow: ellipsis; }
+  .clock {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: 8px;
+    font-size: 14px;
+    color: var(--subtle);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+
+  /* ---------- Sections menu ---------- */
+  .menu {
+    position: fixed;
+    top: 62px;
+    right: 16px;
+    z-index: 30;
+    min-width: 220px;
+    max-width: min(420px, calc(100vw - 32px));
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+  .menu button {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+  .menu button:hover, .menu button:focus-visible { background: var(--hover); outline: none; }
+  .menu button.title { font-weight: 600; }
+  .menu button.section { padding-left: 22px; }
+  .menu button[aria-current="true"] { color: var(--accent); font-weight: 600; }
+
+  /* ---------- Sermon library ---------- */
+  .library { list-style: none; margin: 0; padding: 0; max-height: 55vh; overflow-y: auto; }
+  .library li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .library .open {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .library .open:hover, .library .open:focus-visible { background: var(--hover); outline: none; }
+  .library .name { display: block; font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .library .meta { display: block; font-size: 13px; color: var(--subtle); margin-top: 2px; }
+  .library li.current .name::after { content: " · open now"; font-weight: 400; color: var(--accent); }
+  .library .delete { flex: none; }
+
+  /* ---------- Microphone check ---------- */
+  .mic-step { margin: 0 0 8px; font-size: 15px; line-height: 1.45; }
+  .mic-sentence {
+    margin: 0 0 14px;
+    padding: 12px 14px;
+    border-left: 4px solid var(--quote-edge);
+    background: var(--quote-bg);
+    font: 20px/1.45 Georgia, "Times New Roman", serif;
+  }
+  .meter { height: 10px; border-radius: 5px; background: var(--hover); overflow: hidden; }
+  .meter-fill { height: 100%; width: 0; background: var(--ok); transition: width 0.08s linear; }
+  .mic-heard { min-height: 1.4em; margin: 12px 0 4px; font-size: 14px; color: var(--subtle); font-style: italic; }
+  .mic-verdict { min-height: 1.4em; margin: 4px 0 0; font-size: 15px; font-weight: 600; line-height: 1.4; }
+  .mic-verdict.good { color: var(--ok); }
+  .mic-verdict.warn { color: var(--warn); }
+  .mic-verdict.bad { color: var(--danger); }
+
+  /* ---------- Countdown ---------- */
+  .countdown {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    color: var(--accent);
+    font-size: 30vh;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+
+  /* ---------- Camera mode: while reading, only the text (toolbar returns on mouse move) ---------- */
+  body.camera.listening #reader { top: 0; }
+  body.camera.listening .toolbar, body.camera.listening .progress { transition: opacity 0.25s ease; }
+  body.camera.listening:not(.peek) .toolbar,
+  body.camera.listening:not(.peek) .progress { opacity: 0; pointer-events: none; }
+  body.camera.listening:not(.peek) #heard,
+  body.camera.listening:not(.peek) #banner.info,
+  body.camera.listening:not(.peek) .menu { display: none !important; }
+  body.camera.listening:not(.peek) #reader,
+  body.camera.listening:not(.peek) .w { cursor: none; }
+  body.camera #marker.lost { background: var(--line); } /* keep only the amber edge on camera */
+  .corner-clock {
+    position: fixed;
+    left: 16px;
+    bottom: 12px;
+    z-index: 15;
+    font-size: 13px;
+    color: var(--subtle);
+    opacity: 0.6;
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+  .dot.listening { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+  .dot.starting { background: var(--accent); animation: pulse 0.8s ease-in-out infinite; }
+  .dot.error { background: var(--danger); }
+  .dot.lost, .dot.reconnecting { background: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+
+  .progress {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: var(--accent);
+    z-index: 20;
+    transition: width 0.3s ease;
+  }
+
+  /* ---------- Reader ---------- */
+  #marker {
+    position: fixed;
+    left: 0;
+    right: 0;
+    background: var(--line);
+    border-left: 6px solid var(--line-edge);
+    pointer-events: none;
+    z-index: 0;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  #marker.lost { background: var(--warn-line); border-left-color: var(--warn-edge); }
+  #reader {
+    position: fixed;
+    top: 59px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    overflow-y: auto;
+    z-index: 1;
+    outline: none;
+  }
+  #text {
+    max-width: var(--measure);
+    margin: 0 auto;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: var(--fs);
+    line-height: 1.5;
+    overflow-wrap: break-word;
+  }
+  #text p { margin: 0 0 0.9em; }
+  #text h1 { font-size: 1.3em; margin: 0.2em 0 0.6em; line-height: 1.25; }
+  #text h2 { font-size: 1.15em; margin: 0.6em 0 0.5em; line-height: 1.3; }
+  /* Scripture read aloud ("> " lines) */
+  #text blockquote {
+    margin: 0 0 0.9em;
+    padding: 0.15em 0 0.15em 0.7em;
+    border-left: 0.12em solid var(--quote-edge);
+    background: var(--quote-bg);
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  /* [Notes] the reader doesn't say aloud: visible but small, and skipped by tracking */
+  #text .note { font-size: 0.55em; font-style: italic; color: var(--subtle); }
+  #text p.note-only { margin-bottom: 0.6em; line-height: 1.3; }
+  #text .empty { color: var(--subtle); font-size: 0.6em; text-align: center; }
+  .w {
+    cursor: pointer;
+    border-radius: 0.12em;
+    transition: color 0.25s ease, background-color 0.15s ease;
+  }
+  .w:hover { text-decoration: underline dotted; text-underline-offset: 0.15em; }
+  body.listening .w:hover { text-decoration: none; } /* no distracting underlines under the mouse while reading */
+  #text.jumping .w { transition: none; } /* big jumps would otherwise animate thousands of words */
+  .w.read { color: var(--muted); }
+  .w.current { background: var(--hl); box-shadow: 0 0 0 0.08em var(--hl); color: var(--text); }
+
+  /* ---------- Heard strip & banner ---------- */
+  #heard {
+    position: fixed;
+    left: 50%;
+    bottom: 16px;
+    transform: translateX(-50%);
+    max-width: min(720px, calc(100vw - 32px));
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--subtle);
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    direction: rtl;          /* keep the newest words visible */
+    text-align: left;
+    box-shadow: var(--shadow);
+    z-index: 15;
+  }
+  #heard > span { direction: ltr; unicode-bidi: isolate; }
+  #heard .interim { font-style: italic; opacity: 0.7; }
+  .btn.back {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    height: 40px;
+    box-shadow: var(--shadow);
+    z-index: 16;
+  }
+  body.has-heard .btn.back { bottom: 68px; } /* sit above the "heard" strip */
+  .btn.back svg { transition: transform 0.2s ease; }
+  .btn.back.up svg { transform: rotate(180deg); }
+  #banner {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(640px, calc(100vw - 32px));
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--danger);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    line-height: 1.45;
+    z-index: 25;
+  }
+  #banner.info { border-left-color: var(--accent); }
+  #banner p { margin: 0; flex: 1; }
+  #banner button {
+    border: none;
+    background: none;
+    color: var(--subtle);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---------- Dialogs ---------- */
+  dialog {
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+  .dlg-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 0;
+  }
+  .dlg-head h2 { margin: 0; font-size: 18px; }
+  .dlg-body { padding: 16px 20px; }
+  .dlg-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 20px 20px;
+  }
+  .dlg-foot .spacer { flex: 1; }
+  .close-x {
+    border: none;
+    background: none;
+    color: var(--subtle);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  textarea {
+    width: 100%;
+    height: 50vh;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.5 system-ui, sans-serif;
+  }
+  .hint { margin: 8px 0 0; font-size: 13px; color: var(--subtle); line-height: 1.45; }
+  .field {
+    display: grid;
+    grid-template-columns: 150px 1fr 56px;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+  .field output { text-align: right; color: var(--subtle); font-variant-numeric: tabular-nums; }
+  .field select {
+    grid-column: 2 / 4;
+    height: 34px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font: inherit;
+  }
+  .field input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .field.check { grid-template-columns: auto 1fr; gap: 8px; }
+  .field.check input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+  h3 { font-size: 14px; margin: 20px 0 8px; }
+  .keys { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .keys td { padding: 5px 0; border-bottom: 1px solid var(--border); }
+  .keys td:first-child { width: 150px; }
+  kbd {
+    display: inline-block;
+    min-width: 22px;
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--bg);
+    font: 12px/1.5 ui-monospace, monospace;
+    text-align: center;
+  }
+
+  /* Narrower screens: buttons become icon-only, least-used first (their names stay in the tooltip). */
+  @media (max-width: 1440px) {
+    #installBtn .label, #debugBtn .label, #restartBtn .label, #settingsBtn .label, #fullBtn .label { display: none; }
+    #installBtn, #debugBtn, #restartBtn, #settingsBtn, #fullBtn { padding: 0 9px; }
+  }
+  @media (max-width: 1000px) {
+    #sectionsBtn .label, #editBtn .label, #libraryBtn .label { display: none; }
+    #sectionsBtn, #editBtn, #libraryBtn { padding: 0 9px; }
+  }
+
+  @media (max-width: 720px) {
+    .toolbar { gap: 6px; overflow-x: auto; }
+    .btn .label { display: none; }
+    .btn.primary .label { display: inline; }
+    .btn { padding: 0 9px; }
+    .status .status-text { display: none; }
+    .clock { display: none; }
+    .field { grid-template-columns: 1fr 48px; }
+    .field label { grid-column: 1 / 3; }
+    .field select { grid-column: 1 / 3; }
+    .field.check label { grid-column: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header class="toolbar">
+  <button id="micBtn" class="btn primary" title="Start or pause listening (Space)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g id="micIcon"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></g></svg>
+    <span class="label" id="micLabel">Start</span>
+  </button>
+  <div class="status" aria-live="polite">
+    <span id="dot" class="dot"></span>
+    <span id="statusText" class="status-text">Not listening</span>
+  </div>
+  <div id="clock" class="clock" hidden><span id="clockElapsed"></span><span id="clockLeft" class="clock-left"></span></div>
+  <div class="spacer"></div>
+  <button id="installBtn" class="btn" title="Install Speech Scroll as an app with its own window and icon" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M12 8v6M9 11l3 3 3-3M8 21h8"/></svg>
+    <span class="label">Install app</span>
+  </button>
+  <button id="debugBtn" class="btn" title="Download a log of what Chrome heard, to help tune tracking" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+    <span class="label">Download session log</span>
+  </button>
+  <button id="sectionsBtn" class="btn" title="Jump to a section ([ and ] for previous/next)" aria-haspopup="menu" aria-expanded="false" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+    <span class="label">Sections</span>
+  </button>
+  <button id="restartBtn" class="btn" title="Go back to the beginning (Home)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>
+    <span class="label">Restart</span>
+  </button>
+  <button id="libraryBtn" class="btn" title="Your sermons: open, add or delete (O)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2zM8 7h6"/><path d="M4 19a2 2 0 0 0 2 2h12v-2"/></svg>
+    <span class="label">Sermons</span>
+  </button>
+  <button id="editBtn" class="btn" title="Edit the text of this sermon (E)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
+    <span class="label">Edit text</span>
+  </button>
+  <button id="settingsBtn" class="btn" title="Settings (S)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+    <span class="label">Settings</span>
+  </button>
+  <button id="fullBtn" class="btn" title="Full screen (F)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    <span class="label">Full screen</span>
+  </button>
+</header>
+<div id="progress" class="progress"></div>
+<div id="sectionsMenu" class="menu" role="menu" aria-label="Sections" hidden></div>
+
+<div id="marker"></div>
+<main id="reader" tabindex="-1">
+  <div id="text"></div>
+</main>
+
+<button id="backBtn" class="btn primary back" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+  <span class="label">Back to my place</span>
+</button>
+<div id="heard" hidden></div>
+<div id="cornerClock" class="corner-clock" aria-hidden="true" hidden></div>
+<div id="banner" role="alert" hidden><p id="bannerText"></p><button id="bannerClose" aria-label="Dismiss">&times;</button></div>
+
+<!-- Edit text -->
+<dialog id="editDlg">
+  <div class="dlg-head">
+    <h2 id="editTitle">Edit this sermon</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <textarea id="editor" spellcheck="true" placeholder="Paste the text you want to read aloud..."></textarea>
+    <p class="hint">Blank line = new paragraph. <strong># Title</strong>, <strong>## Section</strong>, <strong>&gt; scripture</strong> (indented), and <strong>[notes]</strong> you don't read aloud (shown small, skipped by the voice tracking).</p>
+  </div>
+  <div class="dlg-foot">
+    <button id="openFileBtn" class="btn">Open .txt file</button>
+    <button id="sampleBtn" class="btn">Load sample</button>
+    <input id="fileInput" type="file" accept=".txt,.md,text/plain" hidden>
+    <div class="spacer"></div>
+    <button id="cancelBtn" class="btn">Cancel</button>
+    <button id="applyBtn" class="btn primary">Use this text</button>
+  </div>
+</dialog>
+
+<!-- Sermon library -->
+<dialog id="libraryDlg">
+  <div class="dlg-head">
+    <h2>Your sermons</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <ul id="libraryList" class="library"></ul>
+    <p class="hint" id="libraryHint">Each sermon remembers where you got to. Sermons are kept in this browser only.</p>
+  </div>
+  <div class="dlg-foot">
+    <button id="addFileBtn" class="btn primary">Add from .txt file</button>
+    <button id="addPasteBtn" class="btn">Paste a new sermon</button>
+    <input id="addFileInput" type="file" accept=".txt,.md,text/plain" multiple hidden>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Close</button>
+  </div>
+</dialog>
+
+<!-- Microphone check -->
+<dialog id="micDlg">
+  <div class="dlg-head">
+    <h2>Microphone check</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <p class="mic-step">Sit where you'll record, press <strong>Start check</strong>, then read this aloud at your normal preaching voice:</p>
+    <p id="micSentence" class="mic-sentence"></p>
+    <div class="meter" aria-hidden="true"><div id="micLevel" class="meter-fill"></div></div>
+    <p id="micDevice" class="hint"></p>
+    <p id="micHeard" class="mic-heard" aria-live="polite"></p>
+    <p id="micVerdict" class="mic-verdict" aria-live="polite"></p>
+  </div>
+  <div class="dlg-foot">
+    <button id="micStartBtn" class="btn primary">Start check</button>
+    <div class="spacer"></div>
+    <button class="btn" data-close>Done</button>
+  </div>
+</dialog>
+
+<div id="countdown" class="countdown" aria-live="assertive" hidden></div>
+
+<!-- Settings -->
+<dialog id="settingsDlg">
+  <div class="dlg-head">
+    <h2>Settings</h2>
+    <button class="close-x" data-close aria-label="Close">&times;</button>
+  </div>
+  <div class="dlg-body">
+    <div class="field check">
+      <input id="cameraMode" type="checkbox">
+      <label for="cameraMode"><strong>Camera mode</strong> (C): while reading, hide the controls and keep the text high and narrow, close to the webcam</label>
+    </div>
+    <p class="hint camera-hint">In camera mode, the column width and reading line below are saved separately from your normal ones. Move the mouse to show the controls.</p>
+    <div class="field">
+      <label for="fontSize">Text size</label>
+      <input id="fontSize" type="range" min="20" max="96" step="2">
+      <output id="fontSizeOut"></output>
+    </div>
+    <div class="field">
+      <label for="width">Column width</label>
+      <input id="width" type="range" min="20" max="90" step="2">
+      <output id="widthOut"></output>
+    </div>
+    <div class="field">
+      <label for="linePos">Reading line</label>
+      <input id="linePos" type="range" min="10" max="60" step="1">
+      <output id="linePosOut"></output>
+    </div>
+    <div class="field">
+      <label for="lang">Language</label>
+      <select id="lang">
+        <option value="en-US">English (US)</option>
+        <option value="en-GB">English (UK)</option>
+        <option value="en-AU">English (Australia)</option>
+        <option value="en-CA">English (Canada)</option>
+        <option value="en-IN">English (India)</option>
+        <option value="es-ES">Español (España)</option>
+        <option value="es-MX">Español (México)</option>
+        <option value="fr-FR">Français</option>
+        <option value="de-DE">Deutsch</option>
+        <option value="it-IT">Italiano</option>
+        <option value="pt-BR">Português (Brasil)</option>
+        <option value="nl-NL">Nederlands</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="theme">Theme</label>
+      <select id="theme">
+        <option value="auto">Match system</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
+    <div class="field check">
+      <input id="showHeard" type="checkbox">
+      <label for="showHeard">Show what the microphone hears</label>
+    </div>
+    <div class="field check">
+      <input id="cameraClock" type="checkbox">
+      <label for="cameraClock">Show a small clock in the corner in camera mode</label>
+    </div>
+    <div class="field">
+      <label for="countdownSecs">Countdown before reading (camera mode)</label>
+      <select id="countdownSecs">
+        <option value="0">None</option>
+        <option value="3">3 seconds</option>
+        <option value="5">5 seconds</option>
+        <option value="10">10 seconds</option>
+      </select>
+    </div>
+    <p><button id="micCheckBtn" class="btn" type="button">Check microphone (M)</button></p>
+
+    <h3>Keyboard shortcuts</h3>
+    <table class="keys">
+      <tr><td><kbd>Space</kbd></td><td>Start or pause listening</td></tr>
+      <tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move back or forward one word</td></tr>
+      <tr><td><kbd>&uarr;</kbd> <kbd>&darr;</kbd></td><td>Move to the previous or next line</td></tr>
+      <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>Previous or next line (works with presentation clickers)</td></tr>
+      <tr><td><kbd>B</kbd></td><td>Start or pause listening (a clicker's "blank screen" button)</td></tr>
+      <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>Previous or next section</td></tr>
+      <tr><td><kbd>Home</kbd></td><td>Go back to the beginning</td></tr>
+      <tr><td><kbd>C</kbd></td><td>Camera mode on or off</td></tr>
+      <tr><td><kbd>+</kbd> <kbd>&minus;</kbd></td><td>Bigger or smaller text</td></tr>
+      <tr><td><kbd>F</kbd></td><td>Full screen</td></tr>
+      <tr><td><kbd>O</kbd></td><td>Your sermons (open, add, delete)</td></tr>
+      <tr><td><kbd>E</kbd> / <kbd>S</kbd></td><td>Edit text / Settings</td></tr>
+      <tr><td><kbd>M</kbd></td><td>Microphone check</td></tr>
+      <tr><td><kbd>Esc</kbd></td><td>Cancel the countdown</td></tr>
+      <tr><td>Click a word</td><td>Move your place to that word</td></tr>
+    </table>
+    <p class="hint">Privacy: Chrome's speech recognition sends your audio to Google's speech service, so it needs an internet connection. Your text and settings stay in this browser. When this page is opened as a local file, Chrome may ask for microphone permission each time.</p>
+    <p class="hint">Tracking trouble? Open this page with <strong>?debug</strong> at the end of its address, read for a minute, then press <strong>Download session log</strong> and share the file.</p>
+    <p class="hint">Speech Scroll <span id="versionText"></span></p>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  'use strict';
+
+  // Sections of this script, in order (search for the banner comments):
+  //   Config & storage · Debug session log · DOM · Word normalisation & fuzzy matching ·
+  //   Rendering the text · Position tracking · Scrolling · Camera mode · Speech recognition ·
+  //   Time & pace · Banner · Settings · Sections menu · Sermon library · Countdown ·
+  //   Microphone check · Editing text · Navigation · Start up
+  // Project brief, decisions and roadmap: handoff/PROJECT_BRIEF.md. Tests: tests/ (npm test).
+
+  // ---------------------------------------------------------------------------
+  // Config & storage
+  // ---------------------------------------------------------------------------
+  const APP_VERSION = '1.2.0';  // bump on every release; shown in Settings and in debug logs
+
+  // Tracking and timing knobs, in one place. Change these only with evidence from real
+  // ?debug logs (see tests/replay-log.js), and re-run the tests afterwards.
+  const TUNING = {
+    LOOKAHEAD: 20,        // how many words ahead to look for the next spoken word
+    RELOCATE_RANGE: 400,  // how far ahead to search when the reader seems lost
+    REREAD_RANGE: 200,    // how far back to search when the reader goes back to re-read
+    LOST_AFTER: 8,        // unmatched words in a row before saying "Lost you" (on-track noisy reading reached 7)
+    FOLLOW_PAUSE: 3000,   // ms to leave the page alone after the reader scrolls by hand
+    QUIET_WARN: 10000,    // ms without any result before suggesting a microphone check
+    MAX_NET_RETRIES: 4,   // network errors in a row before giving up
+    DEFAULT_WPM: 130,     // assumed speaking pace until we've measured the reader's own
+    PACE_WINDOW: 180000,  // ms of recent listening used to measure pace
+    PEEK_TIME: 3000       // ms the toolbar stays visible after a mouse move in camera mode
+  };
+  const { LOOKAHEAD, RELOCATE_RANGE, REREAD_RANGE, LOST_AFTER, FOLLOW_PAUSE, QUIET_WARN, MAX_NET_RETRIES } = TUNING;
+
+  // Saved data lives in localStorage:
+  //   STORE_KEY      { schema, settings, seenMicHint, currentId, sermons: [{ id, title, words, added, opened, pos }] }
+  //   TEXT_KEY + id  the text of one sermon (kept separate, so saving your place doesn't rewrite every sermon)
+  // To change its shape later: bump SCHEMA and add a step to migrate() that upgrades older data.
+  const STORE_KEY = 'speechScroll.v2';
+  const TEXT_KEY = 'speechScroll.text.';
+  const SCHEMA = 3;
+  const DEFAULTS = {
+    fontSize: 40, width: 42, linePos: 33, lang: 'en-US', theme: 'auto', showHeard: true,
+    cameraMode: false, cameraWidth: 26, cameraLinePos: 14, cameraClock: true, countdownSecs: 3
+  };
+
+  const SAMPLE = `# Welcome to Speech Scroll
+
+## Reading
+
+Press the Start button, allow microphone access, and read this text out loud. The highlighted word shows where the app thinks you are, and the page scrolls to keep your place on the reading line.
+
+Speak at your normal pace. The app listens for the words on the page, so it keeps up when you read faster and waits when you stop. If you cough, pause, or say something that isn't in the text, it holds its place until you carry on.
+
+[This is a note. Notes in square brackets are shown small and you don't read them aloud.]
+
+You can skip a few words or even a sentence, or go back and read a sentence again, and it will find you after you read a short phrase. If it ever loses track, click any word to move the highlight there, or use the arrow keys to nudge it.
+
+## Your own text
+
+To read something else, choose Edit text, paste your script, and press Use this text. You can also open a plain text file. A blank line starts a new paragraph. A line starting with one hash sign is the title, and two hash signs start a section.
+
+> Lines starting with a greater-than sign are shown indented, for scripture or quotations you read aloud.
+
+Your text, settings and place are remembered in this browser, so you can close the page and pick up where you left off.
+
+## Recording
+
+Turn on camera mode with the C key to keep the text high and narrow, close to your webcam, with the controls hidden while you read. Use the Sections button, or the square bracket keys, to jump between sections.
+
+Press the space bar to start or pause listening. Press F for full screen, and use the plus and minus keys to change the text size.
+
+Happy reading!`;
+
+  const RANGES = {
+    fontSize: [20, 96], width: [20, 90], linePos: [10, 60], cameraWidth: [20, 90], cameraLinePos: [10, 60]
+  };
+  const LANGS = [...document.querySelectorAll('#lang option')].map((o) => o.value);
+
+  function loadStore() {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORE_KEY));
+      return data && typeof data === 'object' ? migrate(data) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // Upgrade data saved by older versions, one schema step at a time.
+  function migrate(data) {
+    const version = Number.isInteger(data.schema) ? data.schema : 1;
+    if (version < 2) {
+      // v1.1.0 only added settings; cleanSettings() fills in their defaults. Nothing to move.
+    }
+    if (version < 3) {
+      // v1.2.0: one text became a library of sermons. The old text becomes the first sermon
+      // (stored by restoreLibrary(), once the helpers below exist).
+      data.sermons = [];
+      data.legacy = typeof data.text === 'string' ? { text: data.text, pos: data.pos } : null;
+      delete data.text;
+      delete data.pos;
+    }
+    // Add later steps here, oldest first, e.g.
+    //   if (version < 3) data.settings.newName = data.settings.oldName;
+    return data;
+  }
+
+  // Ignore saved values of the wrong type or out of range rather than rendering a broken page.
+  function cleanSettings(saved) {
+    const out = Object.assign({}, DEFAULTS, { lang: browserLang() });
+    if (!saved || typeof saved !== 'object') return out;
+    for (const key of Object.keys(DEFAULTS)) {
+      if (typeof saved[key] !== typeof DEFAULTS[key]) continue;
+      if (RANGES[key]) out[key] = Math.max(RANGES[key][0], Math.min(RANGES[key][1], saved[key]));
+      else out[key] = saved[key];
+    }
+    if (!LANGS.includes(out.lang)) out.lang = browserLang();
+    if (!['auto', 'light', 'dark'].includes(out.theme)) out.theme = 'auto';
+    if (![0, 3, 5, 10].includes(out.countdownSecs)) out.countdownSecs = DEFAULTS.countdownSecs;
+    return out;
+  }
+
+  // Start with the browser's own language/accent (e.g. en-GB) when we offer it.
+  function browserLang() {
+    const prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    for (const pref of prefs) {
+      const exact = LANGS.find((l) => l.toLowerCase() === pref.toLowerCase());
+      if (exact) return exact;
+    }
+    for (const pref of prefs) {
+      const base = pref.split('-')[0].toLowerCase();
+      const close = LANGS.find((l) => l.split('-')[0] === base);
+      if (close) return close;
+    }
+    return DEFAULTS.lang;
+  }
+
+  const stored = loadStore();
+  const settings = cleanSettings(stored.settings);
+  let seenMicHint = stored.seenMicHint === true;
+
+  // --- Sermon library storage ---
+  const validEntry = (e) => e && typeof e.id === 'string' && typeof e.title === 'string';
+  let sermons = Array.isArray(stored.sermons) ? stored.sermons.filter(validEntry) : [];
+  let currentId = typeof stored.currentId === 'string' ? stored.currentId : null;
+  let storageFull = false;
+
+  const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  // "# Title" line, else the first line, shortened.
+  function titleOf(source) {
+    const lines = source.split('\n').map((l) => l.trim()).filter(Boolean);
+    const heading = lines.find((l) => /^#\s+/.test(l));
+    const title = (heading ? heading.replace(/^#\s+/, '') : lines[0] || 'Untitled').replace(/\[[^\]]*\]?/g, '').trim();
+    return title.length > 70 ? title.slice(0, 67) + '…' : title || 'Untitled';
+  }
+
+  function readText(id) {
+    try { return localStorage.getItem(TEXT_KEY + id); } catch (e) { return null; }
+  }
+
+  // Returns false (and says so) when the browser's storage for this page is full.
+  function writeText(id, source) {
+    try {
+      localStorage.setItem(TEXT_KEY + id, source);
+      storageFull = false;
+      return true;
+    } catch (e) {
+      storageFull = true;
+      return false;
+    }
+  }
+
+  function addSermon(source, startPos = 0) {
+    const entry = { id: newId(), title: titleOf(source), words: 0, added: Date.now(), opened: Date.now(), pos: startPos };
+    if (!writeText(entry.id, source)) return null;
+    sermons.push(entry);
+    return entry;
+  }
+
+  const currentEntry = () => sermons.find((e) => e.id === currentId);
+
+  // Load the library, moving older single-text data in, and make sure there's something to read.
+  function restoreLibrary() {
+    sermons = sermons.filter((e) => readText(e.id) !== null);
+    if (stored.legacy) {
+      const entry = addSermon(stored.legacy.text, Number.isInteger(stored.legacy.pos) ? stored.legacy.pos : 0);
+      if (entry) currentId = entry.id;
+    }
+    if (!sermons.length) currentId = addSermon(SAMPLE)?.id || null;
+    if (!currentEntry()) currentId = sermons.length ? mostRecent().id : null;
+    // Remove texts no sermon refers to any more (e.g. left by an interrupted delete), to free space.
+    try {
+      const keep = new Set(sermons.map((e) => TEXT_KEY + e.id));
+      Object.keys(localStorage).filter((k) => k.startsWith(TEXT_KEY) && !keep.has(k)).forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* storage unavailable */ }
+  }
+  const mostRecent = () => sermons.slice().sort((a, b) => b.opened - a.opened)[0];
+
+  restoreLibrary();
+  let text = (currentId && readText(currentId)) || SAMPLE;
+  let pos = currentEntry() && Number.isInteger(currentEntry().pos) && currentEntry().pos >= 0 ? currentEntry().pos : 0;
+
+  let saveTimer = 0;
+  function saveSoon() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveIndex, 400);
+  }
+  function saveIndex() {
+    const entry = currentEntry();
+    if (entry) entry.pos = pos;
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({ schema: SCHEMA, settings, seenMicHint, currentId, sermons }));
+    } catch (e) { /* storage unavailable or full: settings just won't persist */ }
+  }
+  saveIndex(); // store any migration straight away
+
+  // ---------------------------------------------------------------------------
+  // Debug session log (open the page with ?debug): records what Chrome heard so a
+  // real read-through can be replayed (tests/replay-log.js) and used to tune the tracking.
+  // Each 'result' event holds the results from Chrome's resultIndex onward and the
+  // position *after* the event was processed.
+  // ---------------------------------------------------------------------------
+  const DEBUG = /\bdebug\b/i.test(location.search + location.hash);
+  const LOG_CAP = 60000;        // ~90 min of speech produces roughly 20-30k result events
+  const LOG_EXTRA = 5000;       // room kept for important events after the cap is hit
+  const debugLog = [];
+  let logTruncatedAt = null;    // time results stopped being recorded, if the cap was hit
+  let lastLoggedResult = '';
+  let logUnsaved = false;
+
+  function logEvent(type, data) {
+    if (!DEBUG) return;
+    if (type === 'result') {
+      const key = JSON.stringify(data);
+      if (key === lastLoggedResult) return; // Chrome often repeats an identical event
+      lastLoggedResult = key;
+    }
+    if (debugLog.length >= LOG_CAP && (type === 'result' || debugLog.length >= LOG_CAP + LOG_EXTRA)) {
+      if (logTruncatedAt === null) logTruncatedAt = Math.round(performance.now());
+      return;
+    }
+    debugLog.push(Object.assign({ t: Math.round(performance.now()), type, pos }, data));
+    logUnsaved = true;
+    if (debugLog.length % 25 === 1) updateDebugTitle();
+  }
+
+  function updateDebugTitle() {
+    debugBtn.title = `Download a log of what Chrome heard (${debugLog.length} events` +
+      (logTruncatedAt !== null ? ', full: later results not recorded' : '') + ')';
+  }
+
+  function downloadLog() {
+    const blob = new Blob([JSON.stringify({
+      app: 'speech-scroll', version: APP_VERSION, saved: new Date().toISOString(),
+      userAgent: navigator.userAgent, lang: settings.lang, settings,
+      truncatedAt: logTruncatedAt, text, events: debugLog
+    })], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'speech-scroll-log-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    logUnsaved = false;
+  }
+
+  // Don't lose a long recording by closing the window before downloading it.
+  window.addEventListener('beforeunload', (e) => {
+    if (DEBUG && logUnsaved && debugLog.length > 20) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // DOM
+  // ---------------------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const reader = $('reader');
+  const textEl = $('text');
+  const marker = $('marker');
+  const micBtn = $('micBtn');
+  const micLabel = $('micLabel');
+  const micIcon = $('micIcon');
+  const dot = $('dot');
+  const statusText = $('statusText');
+  const progress = $('progress');
+  const heard = $('heard');
+  const banner = $('banner');
+  const bannerText = $('bannerText');
+  const editDlg = $('editDlg');
+  const editor = $('editor');
+  const settingsDlg = $('settingsDlg');
+  const backBtn = $('backBtn');
+  const debugBtn = $('debugBtn');
+  const sectionsBtn = $('sectionsBtn');
+  const sectionsMenu = $('sectionsMenu');
+  const clock = $('clock');
+  const cornerClock = $('cornerClock');
+  const libraryDlg = $('libraryDlg');
+  const libraryList = $('libraryList');
+  const micDlg = $('micDlg');
+  const countdownEl = $('countdown');
+
+  const MIC_ICON = micIcon.innerHTML;
+  const PAUSE_ICON = '<path d="M9 5v14M15 5v14"/>';
+
+  // ---------------------------------------------------------------------------
+  // Word normalisation & fuzzy matching
+  // ---------------------------------------------------------------------------
+  const NUMBERS = {
+    zero: '0', one: '1', two: '2', three: '3', four: '4', five: '5', six: '6', seven: '7',
+    eight: '8', nine: '9', ten: '10', eleven: '11', twelve: '12', thirteen: '13',
+    fourteen: '14', fifteen: '15', sixteen: '16', seventeen: '17', eighteen: '18',
+    nineteen: '19', twenty: '20', thirty: '30', forty: '40', fifty: '50', sixty: '60',
+    seventy: '70', eighty: '80', ninety: '90', hundred: '100'
+  };
+  const SAME_SOUND = {
+    too: 'to', there: 'their', theyre: 'their', youre: 'your', whos: 'whose',
+    ok: 'okay', mr: 'mister', mrs: 'missus', dr: 'doctor', vs: 'versus', etc: 'etcetera'
+  };
+  const canon = (w) => NUMBERS[w] || SAME_SOUND[w] || w;
+
+  // "Well-known," -> ["well", "known"];  "don't" -> ["dont"];  "1,000" -> ["1000"]
+  function normWords(s) {
+    return s
+      .toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/(\d)[,.](?=\d{3}\b)/g, '$1')
+      .replace(/['’‘`]/g, '')
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter(Boolean)
+      .map(canon);
+  }
+
+  function levenshtein(a, b, max) {
+    if (Math.abs(a.length - b.length) > max) return max + 1;
+    let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+    for (let i = 0; i < a.length; i++) {
+      const cur = [i + 1];
+      let rowMin = cur[0];
+      for (let j = 0; j < b.length; j++) {
+        cur[j + 1] = Math.min(prev[j + 1] + 1, cur[j] + 1, prev[j] + (a[i] === b[j] ? 0 : 1));
+        if (cur[j + 1] < rowMin) rowMin = cur[j + 1];
+      }
+      if (rowMin > max) return max + 1;
+      prev = cur;
+    }
+    return prev[b.length];
+  }
+
+  // Tolerates plurals, tenses and small misrecognitions in longer words.
+  function similar(a, b) {
+    if (a === b) return true;
+    const shorter = Math.min(a.length, b.length);
+    if (shorter < 4) return false;
+    if ((a.startsWith(b) || b.startsWith(a)) && Math.abs(a.length - b.length) <= 3) return true;
+    const max = Math.max(a.length, b.length) >= 7 ? 2 : 1;
+    return levenshtein(a, b, max) <= max;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rendering the text
+  // ---------------------------------------------------------------------------
+  // spans[s] = { el, first }   one per visible token; first = index into words, or -1
+  // words[i] = { n, span }     one per matchable word
+  let spans = [];
+  let words = [];
+
+  // Sermon text format (see handoff/SERMON_FORMAT.md):
+  //   "# Title"  "## Section"  blank line = new paragraph  "> scripture"  "[note, not read aloud]"
+  // sections[] lists the headings for the Sections menu: { title, level (1 title, 2 section), span }.
+  let sections = [];
+
+  function parseBlocks(source) {
+    const blocks = [];
+    let block = null;
+    for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
+      const line = raw.trim();
+      const heading = /^(#{1,6})\s+/.exec(line);
+      const quote = /^>\s?/.exec(line);
+      if (!line) {
+        block = null;
+      } else if (heading) {
+        block = null;
+        blocks.push({ tag: heading[1].length === 1 ? 'h1' : 'h2', lines: [line.slice(heading[0].length)] });
+      } else {
+        const tag = quote ? 'blockquote' : 'p';
+        if (!block || block.tag !== tag) blocks.push(block = { tag, lines: [] });
+        block.lines.push(quote ? line.slice(quote[0].length) : line);
+      }
+    }
+    return blocks;
+  }
+
+  function render() {
+    textEl.textContent = '';
+    spans = [];
+    words = [];
+    sections = [];
+    const blocks = parseBlocks(text);
+
+    if (!blocks.length) {
+      const p = document.createElement('p');
+      p.className = 'empty';
+      p.textContent = 'No text yet. Choose "Edit text" to paste something to read.';
+      textEl.appendChild(p);
+    }
+
+    for (const block of blocks) {
+      const el = document.createElement(block.tag);
+      const firstSpan = spans.length;
+      let inNote = false; // a [note] may continue onto the next line, but never past its block
+      block.lines.forEach((line, li) => {
+        if (li) el.appendChild(document.createElement('br'));
+        inNote = appendLine(el, line, inNote);
+      });
+      if (block.tag === 'h1' || block.tag === 'h2') {
+        const title = block.lines.join(' ').replace(/\[[^\]]*\]?/g, '').trim();
+        sections.push({ title: title || 'Untitled', level: block.tag === 'h1' ? 1 : 2, span: firstSpan });
+      }
+      if (spans.length === firstSpan && el.querySelector('.note')) el.classList.add('note-only');
+      textEl.appendChild(el);
+    }
+
+    pos = Math.max(0, Math.min(pos, words.length));
+    shownSpan = spanAt(pos);
+    for (let s = 0; s < shownSpan; s++) spans[s].el.classList.add('read');
+    if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
+    updateProgress();
+    updateSectionsButton();
+    const entry = currentEntry();
+    if (entry) {
+      entry.title = titleOf(text);
+      entry.words = words.length;
+    }
+  }
+
+  // Adds one line of a block: words become trackable spans, [notes] become plain faded text.
+  // Returns whether a note is still open at the end of the line.
+  function appendLine(el, line, inNote) {
+    let buf = '';
+    for (const ch of line) {
+      if (!inNote && ch === '[') {
+        appendWords(el, buf);
+        buf = '[';
+        inNote = true;
+      } else if (inNote && ch === ']') {
+        appendNote(el, buf + ']');
+        buf = '';
+        inNote = false;
+      } else {
+        buf += ch;
+      }
+    }
+    if (inNote) appendNote(el, buf);
+    else appendWords(el, buf);
+    return inNote;
+  }
+
+  function appendNote(el, note) {
+    if (!note) return;
+    const span = document.createElement('span');
+    span.className = 'note';
+    span.textContent = note;
+    el.appendChild(span);
+  }
+
+  function appendWords(el, str) {
+    for (const part of str.split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) {
+        el.appendChild(document.createTextNode(' '));
+        continue;
+      }
+      const span = document.createElement('span');
+      span.className = 'w';
+      span.textContent = part;
+      span.dataset.s = spans.length;
+      const n = normWords(part);
+      spans.push({ el: span, first: n.length ? words.length : -1 });
+      for (const w of n) words.push({ n: w, span: spans.length - 1 });
+      el.appendChild(span);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Position tracking
+  // ---------------------------------------------------------------------------
+  let shownSpan = 0;   // span currently highlighted as "current"
+  let recent = [];     // last few spoken (normalised) words, for context
+  let misses = 0;      // spoken words in a row that didn't match anything nearby
+  let lost = false;    // showing the "lost you" warning
+
+  const spanAt = (i) => (i < words.length ? words[i].span : spans.length);
+
+  function firstWordFrom(s) {
+    for (; s < spans.length; s++) if (spans[s].first >= 0) return spans[s].first;
+    return words.length;
+  }
+
+  function setPos(i, manual = false) {
+    pos = Math.max(0, Math.min(i, words.length));
+    const next = spanAt(pos);
+    if (next !== shownSpan) {
+      if (Math.abs(next - shownSpan) > 40) {
+        textEl.classList.add('jumping');
+        requestAnimationFrame(() => requestAnimationFrame(() => textEl.classList.remove('jumping')));
+      }
+      if (spans[shownSpan]) spans[shownSpan].el.classList.remove('current');
+      if (next > shownSpan) {
+        for (let s = shownSpan; s < next; s++) spans[s].el.classList.add('read');
+      } else {
+        for (let s = next; s < shownSpan; s++) spans[s].el.classList.remove('read');
+      }
+      shownSpan = next;
+      if (spans[shownSpan]) spans[shownSpan].el.classList.add('current');
+    }
+    if (manual) {
+      recent = [];
+      misses = 0;
+      setLost(false);
+      logEvent('jump', {});
+    }
+    notePace(manual);
+    // After a hand scroll, give the reader a moment to look around before following again.
+    if (manual || Date.now() - lastManualScroll > FOLLOW_PAUSE) scrollToCurrent(false);
+    else checkPlaceVisible();
+    updateProgress();
+    saveSoon();
+
+    // Speech only finishes the script on a final result (see onresult), so an early guess
+    // at the last word can't cut the reader off; a manual jump to the end finishes at once.
+    if (manual && atEnd() && wantListening) finish();
+  }
+
+  const atEnd = () => words.length > 0 && pos >= words.length;
+
+  function finish() {
+    stopListening();
+    setStatus('done');
+    showBanner('You reached the end. Press Restart (or Home) to read it again.', true);
+  }
+
+  // How many of the previously spoken words line up, in order, with the text just before index j.
+  function contextScore(j) {
+    let p = j - 1;
+    let count = 0;
+    for (let k = recent.length - 2; k >= 0 && k >= recent.length - 4; k--) {
+      let found = -1;
+      for (let q = p; q >= 0 && q >= p - 2; q--) {
+        if (similar(words[q].n, recent[k])) { found = q; break; }
+      }
+      if (found < 0) break;
+      count++;
+      p = found - 1;
+    }
+    return count;
+  }
+
+  function hearWord(w) {
+    recent.push(w);
+    if (recent.length > 8) recent.shift();
+    if (pos >= words.length) return;
+
+    const end = Math.min(words.length, pos + LOOKAHEAD);
+    let best = -1;
+    let bestScore = -Infinity;
+    for (let j = pos; j < end; j++) {
+      if (!similar(words[j].n, w)) continue;
+      const d = j - pos;
+      const ctx = contextScore(j);
+      // Nearby words are accepted outright. Further jumps need the previous two spoken words
+      // to line up (or one substantial word, or a long distinctive word), so a stray "to"
+      // or "it" plus one common word can't drag the highlight ahead of the reader.
+      const prevWord = recent[recent.length - 2] || '';
+      if (!(d <= 2 || ctx >= 2 || (ctx === 1 && prevWord.length >= 4) || (w.length >= 6 && d <= 6))) continue;
+      const score = ctx * 2 - d * 0.3 + (words[j].n === w ? 0.5 : 0);
+      if (score > bestScore) {
+        bestScore = score;
+        best = j;
+      }
+    }
+
+    if (best >= 0) {
+      misses = 0;
+      setLost(false);
+      setPos(best + 1);
+    } else if (++misses >= 2) {
+      relocate();
+      if (misses >= LOST_AFTER) setLost(true);
+    }
+  }
+
+  // Tell the reader when their words stop matching the text, instead of silently stalling.
+  function setLost(on) {
+    if (lost === on) return;
+    lost = on;
+    marker.classList.toggle('lost', on);
+    setStatus(statusKind);
+    if (on) logEvent('lost', {});
+  }
+
+  const phraseAt = (s, phrase) => phrase.every((w, t) => words[s + t] && similar(words[s + t].n, w));
+
+  // The reader may have skipped ahead or gone back to re-read. Look for the last few
+  // spoken words as a phrase: three words to jump ahead, four (nearest first) to jump back.
+  function relocate() {
+    if (recent.length >= 3) {
+      const phrase = recent.slice(-3);
+      if (phrase.join('').length >= 9) { // shorter phrases ("and it is") are too generic to trust
+        const end = Math.min(words.length - 2, pos + RELOCATE_RANGE);
+        for (let s = pos; s < end; s++) {
+          if (phraseAt(s, phrase)) {
+            misses = 0;
+            setLost(false);
+            setPos(s + 3);
+            return;
+          }
+        }
+      }
+    }
+
+    if (recent.length >= 4) {
+      const phrase = recent.slice(-4);
+      if (phrase.join('').length < 12) return;
+      // The phrase must end at least two words before the current word, so ordinary
+      // reading (whose last words sit just behind us) never triggers a jump back.
+      for (let s = pos - 6; s >= Math.max(0, pos - REREAD_RANGE); s--) {
+        if (phraseAt(s, phrase)) {
+          misses = 0;
+          setLost(false);
+          setPos(s + 4);
+          return;
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scrolling
+  // ---------------------------------------------------------------------------
+  let animId = 0;
+  let animY = 0;
+  let animTarget = 0;
+  let lastFrame = 0;
+
+  function scrollToCurrent(instant) {
+    if (!spans.length) return;
+    const el = spans[Math.min(shownSpan, spans.length - 1)].el;
+    const rr = reader.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    let target = reader.scrollTop + (er.top - rr.top) + er.height / 2 - reader.clientHeight * (readingLine() / 100);
+    target = Math.max(0, Math.min(target, reader.scrollHeight - reader.clientHeight));
+
+    if (instant) {
+      cancelScroll();
+      reader.scrollTop = target;
+      return;
+    }
+    animTarget = target;
+    if (!animId) {
+      animY = reader.scrollTop;
+      lastFrame = performance.now();
+      animId = requestAnimationFrame(stepScroll);
+    }
+  }
+
+  function stepScroll(t) {
+    const dt = Math.min(64, t - lastFrame);
+    lastFrame = t;
+    animY += (animTarget - animY) * (1 - Math.exp(-dt / 140));
+    if (Math.abs(animTarget - animY) < 0.5) {
+      reader.scrollTop = animTarget;
+      animId = 0;
+      checkPlaceVisible();
+      return;
+    }
+    reader.scrollTop = animY;
+    animId = requestAnimationFrame(stepScroll);
+  }
+
+  function cancelScroll() {
+    if (animId) cancelAnimationFrame(animId);
+    animId = 0;
+  }
+
+  // Let the reader scroll by hand without the animation fighting back.
+  let lastManualScroll = 0;
+  function onManualScroll() {
+    lastManualScroll = Date.now();
+    cancelScroll();
+  }
+  reader.addEventListener('wheel', onManualScroll, { passive: true });
+  reader.addEventListener('touchmove', onManualScroll, { passive: true });
+  reader.addEventListener('mousedown', (e) => {
+    if (e.target === reader) onManualScroll(); // dragging the scrollbar
+  });
+
+  // Offer a way back when the current word has been scrolled out of view.
+  function checkPlaceVisible() {
+    if (!spans.length || animId) {
+      backBtn.hidden = true;
+      return;
+    }
+    const el = spans[Math.min(shownSpan, spans.length - 1)].el;
+    const rr = reader.getBoundingClientRect();
+    const er = el.getBoundingClientRect();
+    backBtn.hidden = er.bottom > rr.top && er.top < rr.bottom;
+    backBtn.classList.toggle('up', er.bottom <= rr.top);
+  }
+  let scrollCheckFrame = 0;
+  reader.addEventListener('scroll', () => {
+    cancelAnimationFrame(scrollCheckFrame);
+    scrollCheckFrame = requestAnimationFrame(checkPlaceVisible);
+  }, { passive: true });
+
+  function backToPlace() {
+    lastManualScroll = 0;
+    backBtn.hidden = true;
+    scrollToCurrent(false);
+  }
+
+  // Camera mode keeps its own column width and reading line (high, close to the webcam).
+  const readingLine = () => (settings.cameraMode ? settings.cameraLinePos : settings.linePos);
+  const columnWidth = () => (settings.cameraMode ? settings.cameraWidth : settings.width);
+
+  function layout() {
+    const h = reader.clientHeight;
+    const line = readingLine() / 100;
+    const lineHeight = settings.fontSize * 1.5;
+    textEl.style.paddingTop = Math.round(h * line) + 'px';
+    textEl.style.paddingBottom = Math.round(h * (1 - line)) + 'px';
+    marker.style.top = Math.round(reader.offsetTop + h * line - lineHeight / 2) + 'px';
+    marker.style.height = Math.round(lineHeight) + 'px';
+  }
+
+  function updateProgress() {
+    const pct = words.length ? (pos / words.length) * 100 : 0;
+    progress.style.width = pct + '%';
+    progress.title = `Word ${Math.min(pos + 1, words.length)} of ${words.length}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Camera mode
+  // ---------------------------------------------------------------------------
+  // While listening in camera mode the controls fade away and the text uses the full window.
+  // A real mouse move (or Tab/Escape) brings the toolbar back for a few seconds; clicker keys don't,
+  // so pressing PageDown while recording never flashes the controls.
+  let peekTimer = 0;
+  let lastMouse = '';
+
+  function syncCamera(instant) {
+    document.body.classList.toggle('camera', settings.cameraMode);
+    layout();
+    scrollToCurrent(instant);
+    updateCornerClock();
+  }
+
+  function peek() {
+    if (!settings.cameraMode || !wantListening) return;
+    document.body.classList.add('peek');
+    clearTimeout(peekTimer);
+    peekTimer = setTimeout(() => document.body.classList.remove('peek'), TUNING.PEEK_TIME);
+  }
+  document.addEventListener('mousemove', (e) => {
+    const at = e.screenX + ',' + e.screenY; // ignore synthetic moves caused by scrolling
+    if (at !== lastMouse) {
+      lastMouse = at;
+      peek();
+    }
+  });
+  document.addEventListener('touchstart', peek, { passive: true });
+
+  function toggleCamera() {
+    settings.cameraMode = !settings.cameraMode;
+    applySettings();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Speech recognition
+  // ---------------------------------------------------------------------------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+  let wantListening = false;
+  let recActive = false;
+  let restartTimes = [];
+  let netFails = 0;        // consecutive 'network' errors; retried with backoff before giving up
+  let quietTimer = 0;      // warns when nothing at all has been heard for a while
+  // Per recognition session: words from finished results, and how many words we've fed to the matcher.
+  let sessionFinal = [];
+  let finalUpTo = 0;
+  let consumed = 0;
+  let heardLog = [];
+
+
+  function createRecognizer() {
+    rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+
+    rec.onstart = () => {
+      recActive = true;
+      sessionFinal = [];
+      finalUpTo = 0;
+      consumed = 0;
+      logEvent('start', {});
+    };
+
+    // "Listening" only once the microphone is actually open.
+    rec.onaudiostart = () => {
+      logEvent('audiostart', {});
+      if (wantListening) setStatus('listening');
+    };
+
+    rec.onresult = (e) => {
+      if (!wantListening) return;
+      const res = e.results;
+      const logged = DEBUG && {
+        ri: e.resultIndex,
+        n: res.length,
+        r: Array.from({ length: res.length - e.resultIndex }, (_, k) => {
+          const r = res[e.resultIndex + k];
+          return { t: r[0].transcript, f: r.isFinal };
+        })
+      };
+      heardSomething();
+
+      while (finalUpTo < res.length && res[finalUpTo].isFinal) {
+        const toks = tokens(res[finalUpTo][0].transcript);
+        sessionFinal.push(...toks);
+        heardLog.push(...toks);
+        finalUpTo++;
+      }
+      if (heardLog.length > 40) heardLog = heardLog.slice(-40);
+      const interim = [];
+      for (let i = finalUpTo; i < res.length; i++) interim.push(...tokens(res[i][0].transcript));
+
+      // Interim results are fed immediately so scrolling doesn't lag a sentence behind.
+      // Only words we haven't seen yet are fed, since each result repeats the earlier ones.
+      const all = sessionFinal.concat(interim);
+      if (all.length < consumed) consumed = all.length;
+      for (let k = consumed; k < all.length; k++) {
+        for (const w of normWords(all[k])) hearWord(w);
+      }
+      consumed = all.length;
+      showHeard(interim);
+      if (logged) logEvent('result', logged); // logged with the position after this event
+      tickClock();
+
+      // Finish only once Chrome has settled on its final words, not on an early guess.
+      if (atEnd() && !interim.length) finish();
+    };
+
+    rec.onerror = (e) => {
+      logEvent('error', { error: e.error });
+      if (e.error === 'network') {
+        // Often a brief Wi-Fi/VPN blip: retry a few times (the end handler restarts with backoff).
+        netFails++;
+        if (netFails > MAX_NET_RETRIES || navigator.onLine === false) {
+          stopListening();
+          setStatus('error');
+          showBanner('Chrome\'s speech recognition needs an internet connection, and it can\'t reach it right now. Check your connection, then press Start again.');
+        } else {
+          setStatus('reconnecting');
+        }
+        return;
+      }
+      const messages = {
+        'not-allowed': 'Microphone access is blocked. Click the icon at the right of Chrome\'s address bar, allow the microphone, then press Start again.',
+        'service-not-allowed': 'Chrome won\'t allow speech recognition here. Check the microphone permission in the address bar, then press Start again.',
+        'audio-capture': 'No microphone was found. Plug one in or check your system sound settings, then press Start again.',
+        'language-not-supported': 'Chrome doesn\'t support speech recognition for the selected language. Pick another one in Settings.'
+      };
+      if (messages[e.error]) {
+        stopListening();
+        setStatus('error');
+        showBanner(messages[e.error]);
+      }
+      // 'no-speech' and 'aborted' are routine; the end handler restarts as needed.
+    };
+
+    rec.onend = () => {
+      recActive = false;
+      logEvent('end', {});
+      if (!wantListening) return;
+      // Chrome ends sessions by itself every so often; restart, but not in a tight loop.
+      const now = Date.now();
+      restartTimes = restartTimes.filter((t) => now - t < 10000);
+      restartTimes.push(now);
+      if (restartTimes.length > 5) {
+        stopListening();
+        setStatus('error');
+        showBanner('Speech recognition keeps stopping. Check your microphone and internet connection, then press Start again.');
+        return;
+      }
+      // Restart straight away (words spoken in the gap are lost), or back off after network errors.
+      const delay = netFails ? 500 * 2 ** (netFails - 1) : 30;
+      setTimeout(restartRecognizer, delay);
+    };
+  }
+
+  function restartRecognizer() {
+    if (!wantListening || recActive) return;
+    try {
+      rec.start();
+    } catch (err) {
+      logEvent('start-failed', { error: String(err && err.name) });
+    }
+  }
+
+  // If the connection drops and comes back while we're retrying, resume straight away.
+  window.addEventListener('online', () => {
+    if (wantListening && !recActive) restartRecognizer();
+  });
+
+  function heardSomething() {
+    netFails = 0;
+    if (statusKind === 'reconnecting') setStatus('listening');
+    if (bannerKind === 'quiet' || bannerKind === 'mic-hint') hideBanner();
+    armQuietTimer();
+  }
+
+  // Three different problems (muted/wrong mic, no connection, nobody speaking) all look like
+  // "nothing happens"; say so after a while rather than pulsing "Listening" forever.
+  function armQuietTimer() {
+    clearTimeout(quietTimer);
+    if (!wantListening) return;
+    quietTimer = setTimeout(() => {
+      if (!wantListening) return;
+      logEvent('quiet', {});
+      showBanner('I haven\'t heard anything for a while. If you\'re reading aloud, check that the right microphone is selected (the microphone icon in Chrome\'s address bar) and that you\'re online.', true, 'quiet');
+    }, QUIET_WARN);
+  }
+
+  const tokens = (s) => s.trim().split(/\s+/).filter(Boolean);
+
+  function startListening() {
+    if (!SR) return;
+    if (!words.length) {
+      showBanner('There\'s no text to read yet. Choose "Edit text" to add some.', true);
+      return;
+    }
+    if (atEnd()) {
+      showBanner('You\'re at the end of the text. Press Restart (or Home) to read it again.', true);
+      return;
+    }
+    hideBanner();
+    if (!seenMicHint) {
+      seenMicHint = true;
+      saveSoon();
+      showBanner('Chrome will ask to use your microphone: choose Allow. Your speech is turned into text by Google\'s speech service, then matched to your script here.', true, 'mic-hint');
+    }
+    if (!rec) createRecognizer();
+    rec.lang = settings.lang;
+    wantListening = true;
+    document.body.classList.add('listening');
+    startClock();
+    syncCamera(false);
+    restartTimes = [];
+    netFails = 0;
+    setStatus('starting');
+    if (!recActive) {
+      try { rec.start(); } catch (err) { logEvent('start-failed', { error: String(err && err.name) }); }
+    }
+    armQuietTimer();
+    keepScreenAwake(true);
+    updateMicButton();
+  }
+
+  function stopListening() {
+    wantListening = false;
+    document.body.classList.remove('listening', 'peek');
+    stopClock();
+    syncCamera(false);
+    if (rec) {
+      try { rec.abort(); } catch (err) { /* not running */ }
+    }
+    clearTimeout(quietTimer);
+    if (bannerKind === 'quiet' || bannerKind === 'mic-hint') hideBanner();
+    keepScreenAwake(false);
+    setLost(false);
+    setStatus('off');
+    setHeardVisible(false);
+    updateMicButton();
+  }
+
+  // Nobody touches the keyboard or mouse while reading aloud, so stop the screen dimming or locking.
+  let wakeLock = null;
+  async function keepScreenAwake(on) {
+    try {
+      if (on && !wakeLock && 'wakeLock' in navigator && document.visibilityState === 'visible') {
+        const lock = await navigator.wakeLock.request('screen');
+        lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+        wakeLock = lock;
+        if (!wantListening) keepScreenAwake(false); // stopped while the request was pending
+      } else if (!on && wakeLock) {
+        const lock = wakeLock;
+        wakeLock = null;
+        await lock.release();
+      }
+    } catch (err) { /* not supported or not allowed: the screen may dim as usual */ }
+  }
+  // Chrome drops the lock when the tab is hidden; take it again on return.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wantListening) keepScreenAwake(true);
+  });
+
+  const toggleListening = () => {
+    if (wantListening) stopListening();
+    else if (counting()) cancelCountdown();
+    else beginReading();
+  };
+
+  function updateMicButton() {
+    micBtn.classList.toggle('listening', wantListening);
+    micLabel.textContent = wantListening ? 'Pause' : 'Start';
+    micIcon.innerHTML = wantListening ? PAUSE_ICON : MIC_ICON;
+  }
+
+  let statusKind = 'off';
+  function setStatus(kind) {
+    statusKind = kind;
+    const labels = {
+      off: 'Not listening', starting: 'Starting…', listening: 'Listening',
+      lost: 'Lost you – read a phrase or click a word',
+      reconnecting: 'Reconnecting…', done: 'Finished', error: 'Stopped', unsupported: 'Not supported'
+    };
+    const shown = kind === 'listening' && lost ? 'lost' : kind;
+    dot.className = 'dot ' + (shown === 'unsupported' ? 'error' : shown);
+    statusText.textContent = labels[shown];
+  }
+
+  function setHeardVisible(on) {
+    heard.hidden = !on;
+    document.body.classList.toggle('has-heard', on);
+  }
+
+  function showHeard(interim) {
+    if (!settings.showHeard || (!heardLog.length && !interim.length)) {
+      setHeardVisible(false);
+      return;
+    }
+    // One isolated left-to-right run, so the newest words sit at the right and the
+    // container's right-to-left overflow trims the oldest words first.
+    const line = document.createElement('span');
+    line.textContent = heardLog.slice(-16).join(' ') + ' ';
+    const interimPart = document.createElement('span');
+    interimPart.className = 'interim';
+    interimPart.textContent = interim.join(' ');
+    line.append(interimPart);
+    heard.replaceChildren(line);
+    setHeardVisible(true);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Time & pace
+  // ---------------------------------------------------------------------------
+  // Elapsed time counts only while listening. Pace = words advanced by voice over the last few
+  // minutes of listening (manual jumps excluded); until there's enough data, assume DEFAULT_WPM.
+  let elapsedMs = 0;
+  let listenStart = null;
+  let clockTimer = 0;
+  let paceSamples = [];   // { t: listening ms, pos }
+
+  const listeningMs = () => elapsedMs + (listenStart !== null ? performance.now() - listenStart : 0);
+
+  function startClock() {
+    if (listenStart === null) listenStart = performance.now();
+    paceSamples.push({ t: listeningMs(), pos });
+    clearInterval(clockTimer);
+    clockTimer = setInterval(tickClock, 1000);
+  }
+
+  function stopClock() {
+    elapsedMs = listeningMs();
+    listenStart = null;
+    clearInterval(clockTimer);
+    tickClock();
+  }
+
+  function resetClock() {
+    elapsedMs = 0;
+    if (listenStart !== null) listenStart = performance.now();
+    paceSamples = [{ t: 0, pos }];
+    tickClock();
+  }
+
+  function notePace(manual) {
+    if (!wantListening) return;
+    const t = listeningMs();
+    if (manual) paceSamples = [];  // a jump isn't reading: measure again from here
+    paceSamples.push({ t, pos });
+    while (paceSamples.length > 2 && paceSamples[1].t < t - TUNING.PACE_WINDOW) paceSamples.shift();
+  }
+
+  // Returns [words per minute, measured?]
+  function pace() {
+    const first = paceSamples[0];
+    const last = paceSamples[paceSamples.length - 1];
+    if (first && last) {
+      const minutes = (last.t - first.t) / 60000;
+      const advanced = last.pos - first.pos;
+      if (minutes >= 0.5 && advanced >= 20) return [advanced / minutes, true];
+    }
+    return [TUNING.DEFAULT_WPM, false];
+  }
+
+  function formatTime(ms) {
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = String(total % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
+  }
+
+  function timeLeftText() {
+    if (atEnd()) return 'done';
+    const minutes = (words.length - pos) / pace()[0];
+    return minutes < 1 ? 'under a minute left' : `about ${Math.round(minutes)} min left`;
+  }
+
+  function tickClock() {
+    clock.hidden = !words.length;
+    if (!words.length) return;
+    const [wpm, measured] = pace();
+    $('clockElapsed').textContent = formatTime(listeningMs());
+    $('clockLeft').textContent = ' · ' + timeLeftText();
+    clock.title = measured
+      ? `Your pace: ${Math.round(wpm)} words/min`
+      : `Estimated at ${TUNING.DEFAULT_WPM} words/min until you've read for a little while`;
+    updateCornerClock();
+  }
+
+  function updateCornerClock() {
+    cornerClock.hidden = !(settings.cameraMode && settings.cameraClock && wantListening && words.length);
+    if (!cornerClock.hidden) cornerClock.textContent = formatTime(listeningMs()) + ' · ' + timeLeftText();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Banner
+  // ---------------------------------------------------------------------------
+  let bannerKind = '';   // lets temporary hints (e.g. 'quiet') clear themselves when no longer true
+  function showBanner(msg, info = false, kind = 'message') {
+    bannerText.textContent = msg;
+    banner.classList.toggle('info', info);
+    banner.hidden = false;
+    bannerKind = kind;
+  }
+  function hideBanner() {
+    banner.hidden = true;
+    bannerKind = '';
+  }
+  $('bannerClose').addEventListener('click', hideBanner);
+
+  // ---------------------------------------------------------------------------
+  // Settings
+  // ---------------------------------------------------------------------------
+  // The width and reading-line sliders edit the camera-mode values while camera mode is on.
+  const controls = [
+    { el: $('fontSize'), out: $('fontSizeOut'), fmt: (v) => v + 'px', key: () => 'fontSize' },
+    { el: $('width'), out: $('widthOut'), fmt: (v) => v + 'ch', key: () => (settings.cameraMode ? 'cameraWidth' : 'width') },
+    { el: $('linePos'), out: $('linePosOut'), fmt: (v) => v + '%', key: () => (settings.cameraMode ? 'cameraLinePos' : 'linePos') }
+  ];
+
+  function applySettings() {
+    const root = document.documentElement;
+    root.style.setProperty('--fs', settings.fontSize + 'px');
+    root.style.setProperty('--measure', columnWidth() + 'ch');
+    if (settings.theme === 'auto') root.removeAttribute('data-theme');
+    else root.setAttribute('data-theme', settings.theme);
+    if (!settings.showHeard) setHeardVisible(false);
+    for (const c of controls) {
+      c.el.value = settings[c.key()];
+      c.out.textContent = c.fmt(settings[c.key()]);
+    }
+    $('lang').value = settings.lang;
+    $('theme').value = settings.theme;
+    $('showHeard').checked = settings.showHeard;
+    $('cameraMode').checked = settings.cameraMode;
+    $('cameraClock').checked = settings.cameraClock;
+    $('countdownSecs').value = String(settings.countdownSecs);
+    syncCamera(true);
+    saveSoon();
+  }
+
+  for (const c of controls) {
+    c.el.addEventListener('input', () => {
+      settings[c.key()] = Number(c.el.value);
+      applySettings();
+    });
+  }
+  $('cameraMode').addEventListener('change', (e) => {
+    settings.cameraMode = e.target.checked;
+    applySettings();
+  });
+  $('cameraClock').addEventListener('change', (e) => {
+    settings.cameraClock = e.target.checked;
+    applySettings();
+  });
+  $('countdownSecs').addEventListener('change', (e) => {
+    settings.countdownSecs = Number(e.target.value);
+    saveSoon();
+  });
+  $('theme').addEventListener('change', (e) => {
+    settings.theme = e.target.value;
+    applySettings();
+  });
+  $('showHeard').addEventListener('change', (e) => {
+    settings.showHeard = e.target.checked;
+    applySettings();
+  });
+  $('lang').addEventListener('change', (e) => {
+    settings.lang = e.target.value;
+    saveSoon();
+    if (rec) {
+      rec.lang = settings.lang;
+      // Restart so the new language takes effect; the end handler starts it again.
+      if (wantListening) try { rec.abort(); } catch (err) { /* not running */ }
+    }
+  });
+
+  function changeFontSize(delta) {
+    settings.fontSize = Math.max(20, Math.min(96, settings.fontSize + delta));
+    applySettings();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sections menu
+  // ---------------------------------------------------------------------------
+  // Lists the "# " title and "## " sections so a long sermon can be recorded in takes.
+  function updateSectionsButton() {
+    sectionsBtn.hidden = !sections.some((sec) => sec.level === 2);
+    if (sectionsBtn.hidden) closeSections(false);
+  }
+
+  // Index into sections[] of the section containing the current word, or -1 before the first.
+  function currentSection() {
+    let found = -1;
+    sections.forEach((sec, i) => { if (sec.span <= shownSpan) found = i; });
+    return found;
+  }
+
+  function jumpToSection(i) {
+    if (i >= 0 && i < sections.length) setPos(firstWordFrom(sections[i].span), true);
+  }
+
+  // dir > 0: next section. dir < 0: start of this section, or the previous one if already there.
+  function stepSection(dir) {
+    const cur = currentSection();
+    if (dir > 0) {
+      const next = sections.findIndex((sec) => sec.span > shownSpan);
+      if (next >= 0) jumpToSection(next);
+    } else if (cur >= 0 && firstWordFrom(sections[cur].span) < pos) {
+      jumpToSection(cur);
+    } else {
+      jumpToSection(cur - 1);
+    }
+  }
+
+  function openSections() {
+    const cur = currentSection();
+    sectionsMenu.replaceChildren(...sections.map((sec, i) => {
+      const item = document.createElement('button');
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      item.className = sec.level === 1 ? 'title' : 'section';
+      item.textContent = sec.title;
+      if (i === cur) item.setAttribute('aria-current', 'true');
+      item.addEventListener('click', () => {
+        closeSections(false);
+        jumpToSection(i);
+      });
+      return item;
+    }));
+    const r = sectionsBtn.getBoundingClientRect();
+    sectionsMenu.style.top = Math.round(r.bottom + 6) + 'px';
+    sectionsMenu.style.right = Math.max(16, Math.round(window.innerWidth - r.right)) + 'px';
+    sectionsMenu.hidden = false;
+    sectionsBtn.setAttribute('aria-expanded', 'true');
+    const items = sectionsMenu.querySelectorAll('button');
+    (items[cur] || items[0]).focus();
+  }
+
+  function closeSections(refocus) {
+    if (sectionsMenu.hidden) return;
+    sectionsMenu.hidden = true;
+    sectionsBtn.setAttribute('aria-expanded', 'false');
+    if (refocus) sectionsBtn.focus();
+  }
+
+  sectionsBtn.addEventListener('click', () => (sectionsMenu.hidden ? openSections() : closeSections(false)));
+  sectionsMenu.addEventListener('keydown', (e) => {
+    const items = [...sectionsMenu.querySelectorAll('button')];
+    const at = items.indexOf(document.activeElement);
+    const moves = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 };
+    if (e.key in moves) {
+      e.preventDefault();
+      items[Math.max(0, Math.min(items.length - 1, moves[e.key]))].focus();
+    } else if (e.key === 'Escape' || e.key === 'Tab') {
+      e.preventDefault();
+      closeSections(true);
+    }
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (!sectionsMenu.hidden && !sectionsMenu.contains(e.target) && !sectionsBtn.contains(e.target)) closeSections(false);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sermon library
+  // ---------------------------------------------------------------------------
+  const STORAGE_FULL = 'This browser\'s storage for Speech Scroll is full. Delete some old sermons in "Sermons", then try again.';
+
+  function sermonMeta(e) {
+    const count = e.id === currentId ? words.length : e.words || 0;
+    const at = e.id === currentId ? pos : e.pos || 0;
+    const mins = Math.max(1, Math.round(count / pace()[0]));
+    const pct = count ? Math.min(100, Math.round((at / count) * 100)) : 0;
+    const opened = new Date(e.opened).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const progressText = pct >= 100 ? 'finished' : pct ? pct + '% read' : 'not started';
+    return `${count.toLocaleString()} words · about ${mins} min · ${progressText} · opened ${opened}`;
+  }
+
+  function renderLibrary() {
+    libraryList.replaceChildren(...sermons.slice().sort((a, b) => b.opened - a.opened).map((e) => {
+      const li = document.createElement('li');
+      li.classList.toggle('current', e.id === currentId);
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'open';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = e.title;
+      const meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = sermonMeta(e);
+      open.append(name, meta);
+      open.addEventListener('click', () => {
+        libraryDlg.close();
+        openSermon(e.id);
+      });
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'btn delete';
+      del.textContent = 'Delete';
+      del.setAttribute('aria-label', 'Delete ' + e.title);
+      del.addEventListener('click', () => deleteSermon(e.id));
+      li.append(open, del);
+      return li;
+    }));
+    $('libraryHint').textContent = storageFull
+      ? STORAGE_FULL
+      : 'Each sermon remembers where you got to. Sermons are kept in this browser only; keep your .txt files as a backup.';
+  }
+
+  function openLibrary() {
+    closeSections(false);
+    renderLibrary();
+    libraryDlg.showModal();
+    const first = libraryList.querySelector('.open');
+    if (first) first.focus();
+  }
+
+  function openSermon(id) {
+    if (id === currentId) return;
+    const source = readText(id);
+    if (source === null) {
+      showBanner('That sermon couldn\'t be loaded from this browser\'s storage.');
+      return;
+    }
+    stopListening();
+    saveIndex(); // remember where we were in the sermon we're leaving
+    currentId = id;
+    const entry = currentEntry();
+    entry.opened = Date.now();
+    text = source;
+    pos = Number.isInteger(entry.pos) && entry.pos >= 0 ? entry.pos : 0;
+    recent = [];
+    misses = 0;
+    setLost(false);
+    heardLog = [];
+    setHeardVisible(false);
+    draft = null;
+    render();
+    layout();
+    scrollToCurrent(true);
+    resetClock();
+    saveIndex();
+  }
+
+  // Adds a sermon (or opens it if the same text is already there) and opens it. fileName gives the
+  // title when the text has no "# " title line.
+  function addAndOpen(source, fileName) {
+    const existing = sermons.find((e) => readText(e.id) === source);
+    if (existing) {
+      openSermon(existing.id);
+      return 'existing';
+    }
+    const entry = addSermon(source);
+    if (!entry) {
+      showBanner(STORAGE_FULL);
+      return 'full';
+    }
+    if (fileName) entry.fileName = fileName.replace(/\.[^.]+$/, '');
+    openSermon(entry.id);
+    return 'added';
+  }
+
+  function deleteSermon(id) {
+    const entry = sermons.find((e) => e.id === id);
+    if (!entry || !confirm(`Delete "${entry.title}" from Speech Scroll? Your .txt file (if you have one) isn't affected.`)) return;
+    sermons = sermons.filter((e) => e.id !== id);
+    try { localStorage.removeItem(TEXT_KEY + id); } catch (e) { /* storage unavailable */ }
+    storageFull = false;
+    if (id === currentId) {
+      currentId = null;
+      if (!sermons.length) addSermon(SAMPLE);
+      openSermon(mostRecent().id);
+    }
+    saveIndex();
+    renderLibrary();
+  }
+
+  $('addFileBtn').addEventListener('click', () => $('addFileInput').click());
+  $('addFileInput').addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    e.target.value = '';
+    const results = [];
+    for (const file of files) results.push(addAndOpen(await file.text(), file.name));
+    libraryDlg.close();
+    const added = results.filter((r) => r === 'added').length;
+    if (results.includes('full')) return;
+    if (files.length > 1) showBanner(`Added ${added} of ${files.length} sermons. The last one is open now.`, true);
+    else if (results[0] === 'existing') showBanner('That sermon was already in your list, so it\'s open now.', true);
+  });
+  $('addPasteBtn').addEventListener('click', () => {
+    libraryDlg.close();
+    openEditor('new');
+  });
+
+  // ---------------------------------------------------------------------------
+  // Countdown
+  // ---------------------------------------------------------------------------
+  // In camera mode, Start counts down first, so the reader can settle and look at the camera.
+  let countdownTimer = 0;
+  const counting = () => !countdownEl.hidden;
+
+  function beginReading() {
+    const secs = settings.cameraMode ? settings.countdownSecs : 0;
+    if (!secs || !SR || !words.length || atEnd()) return startListening();
+    let left = secs;
+    countdownEl.textContent = left;
+    countdownEl.hidden = false;
+    micLabel.textContent = 'Cancel';
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(() => {
+      left--;
+      if (left > 0) {
+        countdownEl.textContent = left;
+      } else {
+        cancelCountdown();
+        startListening();
+      }
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    clearInterval(countdownTimer);
+    countdownEl.hidden = true;
+    updateMicButton();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Microphone check
+  // ---------------------------------------------------------------------------
+  // Read a short passage: shows the microphone's level and name, what Chrome heard, and a verdict,
+  // so a wrong or muted microphone is caught before a long recording.
+  const CHECK_TEXT = 'Grace and peace to you from God our Father. Today we read from Romans chapter 8, verse 28.';
+  let check = null; // { rec, stream, ctx, raf, timers, peak, heard, done }
+
+  function openMicCheck() {
+    stopListening();
+    cancelCountdown();
+    if (settingsDlg.open) settingsDlg.close();
+    $('micSentence').textContent = CHECK_TEXT;
+    for (const id of ['micDevice', 'micHeard', 'micVerdict']) $(id).textContent = '';
+    $('micVerdict').className = 'mic-verdict';
+    $('micLevel').style.width = '0';
+    $('micStartBtn').disabled = !SR;
+    $('micStartBtn').textContent = 'Start check';
+    if (!SR) $('micVerdict').textContent = 'Speech recognition isn\'t available in this browser. Use Google Chrome.';
+    micDlg.showModal();
+  }
+
+  async function startMicCheck() {
+    endMicCheck(false);
+    const c = check = { peak: 0, heard: '', timers: [], done: false };
+    $('micStartBtn').disabled = true;
+    $('micStartBtn').textContent = 'Listening…';
+    $('micHeard').textContent = '';
+    $('micVerdict').textContent = '';
+    $('micVerdict').className = 'mic-verdict';
+
+    // Level meter (optional: the check still works without it).
+    try {
+      c.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const track = c.stream.getAudioTracks()[0];
+      $('micDevice').textContent = 'Microphone: ' + (track && track.label ? track.label : 'your default microphone') +
+        '. To use a different one, click the microphone icon in Chrome\'s address bar.';
+      c.ctx = new AudioContext();
+      const analyser = c.ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      c.ctx.createMediaStreamSource(c.stream).connect(analyser);
+      const data = new Float32Array(analyser.fftSize);
+      const draw = () => {
+        analyser.getFloatTimeDomainData(data);
+        let sum = 0;
+        for (const v of data) sum += v * v;
+        const rms = Math.sqrt(sum / data.length);
+        c.peak = Math.max(c.peak, rms);
+        $('micLevel').style.width = Math.min(100, rms * 400) + '%';
+        c.raf = requestAnimationFrame(draw);
+      };
+      draw();
+    } catch (err) {
+      $('micDevice').textContent = 'Couldn\'t show the microphone level (permission not given?).';
+    }
+    if (c !== check) return; // closed while waiting for permission
+
+    c.rec = new SR();
+    c.rec.continuous = true;
+    c.rec.interimResults = true;
+    c.rec.lang = settings.lang;
+    c.rec.onresult = (e) => {
+      c.heard = Array.from(e.results, (r) => r[0].transcript).join(' ').replace(/\s+/g, ' ').trim();
+      $('micHeard').textContent = 'Chrome heard: "' + c.heard + '"';
+      const allFinal = Array.from(e.results).every((r) => r.isFinal);
+      if (allFinal && normWords(c.heard).length >= normWords(CHECK_TEXT).length * 0.8) endMicCheck(true, null, c);
+      else if (allFinal) restartTimer(c, 2500);
+    };
+    c.rec.onerror = (e) => {
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+      endMicCheck(true, e.error, c);
+    };
+    try {
+      c.rec.start();
+    } catch (err) {
+      endMicCheck(true, 'start', c);
+      return;
+    }
+    c.timers.push(setTimeout(() => endMicCheck(true, null, c), 15000));
+  }
+
+  function restartTimer(c, ms) {
+    clearTimeout(c.settle);
+    c.settle = setTimeout(() => endMicCheck(true, null, c), ms);
+  }
+
+  // Stops everything check c started; with report = true, shows the verdict. Late events from an
+  // earlier check pass their own c, which is already done, so they can't end a newer check.
+  function endMicCheck(report, error, c = check) {
+    if (!c || c.done) return;
+    c.done = true;
+    if (check === c) check = null;
+    c.timers.forEach(clearTimeout);
+    clearTimeout(c.settle);
+    cancelAnimationFrame(c.raf);
+    try { if (c.rec) c.rec.abort(); } catch (err) { /* not running */ }
+    if (c.stream) c.stream.getTracks().forEach((t) => t.stop());
+    if (c.ctx) c.ctx.close().catch(() => {});
+    $('micLevel').style.width = '0';
+    $('micStartBtn').disabled = false;
+    $('micStartBtn').textContent = 'Check again';
+    if (report) showMicVerdict(c, error);
+  }
+
+  function showMicVerdict(c, error) {
+    const target = normWords(CHECK_TEXT);
+    const heard = normWords(c.heard);
+    // Count target words heard in order (allowing extra or missing words in between).
+    let j = 0;
+    const missed = [];
+    for (const w of target) {
+      const k = heard.slice(j).findIndex((h) => similar(h, w));
+      if (k >= 0) j += k + 1;
+      else missed.push(w);
+    }
+    const got = target.length - missed.length;
+    const quiet = c.stream && c.peak < 0.02;
+    let kind;
+    let msg;
+    if (error === 'not-allowed' || error === 'service-not-allowed') {
+      kind = 'bad';
+      msg = 'Microphone access is blocked. Click the icon at the right of Chrome\'s address bar and allow the microphone.';
+    } else if (error === 'network') {
+      kind = 'bad';
+      msg = 'Chrome couldn\'t reach its speech service. Check your internet connection.';
+    } else if (!heard.length) {
+      kind = 'bad';
+      msg = 'Chrome didn\'t hear anything. Check that the right microphone is selected and not muted, then check again.';
+    } else if (got >= target.length * 0.85) {
+      kind = 'good';
+      msg = `Chrome heard you clearly (${got} of ${target.length} words). You're ready to record.`;
+    } else if (got >= target.length * 0.5) {
+      kind = 'warn';
+      msg = `Chrome heard most of it (${got} of ${target.length} words) but missed: ${missed.join(', ')}. Try a little louder or closer to the microphone, then check again.`;
+    } else {
+      kind = 'bad';
+      msg = `Chrome understood only ${got} of ${target.length} words. Try sitting closer, a quieter room, or a different microphone.`;
+    }
+    if (quiet && kind !== 'good') msg += ' Your microphone level was very low.';
+    $('micVerdict').textContent = msg;
+    $('micVerdict').className = 'mic-verdict ' + kind;
+    logEvent('miccheck', { got, of: target.length, heard: c.heard, peak: Math.round(c.peak * 1000) / 1000, error: error || null });
+  }
+
+  $('micStartBtn').addEventListener('click', startMicCheck);
+  $('micCheckBtn').addEventListener('click', openMicCheck);
+  micDlg.addEventListener('close', () => endMicCheck(false));
+
+  // ---------------------------------------------------------------------------
+  // Editing text
+  // ---------------------------------------------------------------------------
+  let draft = null;          // unapplied edits, kept if the dialog is closed by accident
+  let replacedWhole = false; // "Load sample" / "Open file" start from the top
+
+  // mode 'edit': change the open sermon. mode 'new': paste a sermon to add to the library.
+  let editorMode = 'edit';
+  function openEditor(mode = 'edit') {
+    editorMode = mode;
+    $('editTitle').textContent = mode === 'new' ? 'Paste a new sermon' : 'Edit this sermon';
+    $('applyBtn').textContent = mode === 'new' ? 'Add sermon' : 'Use this text';
+    $('openFileBtn').textContent = mode === 'new' ? 'Open .txt file' : 'Replace with .txt file';
+    editor.value = mode === 'new' ? '' : draft !== null ? draft : text;
+    replacedWhole = false;
+    editDlg.showModal();
+    editor.focus();
+  }
+  editDlg.addEventListener('close', () => {
+    if (!editDlg.returnValue && editorMode === 'edit') draft = editor.value !== text ? editor.value : null;
+    editDlg.returnValue = '';
+  });
+
+  // After an edit, find the last few words read in the new text so a typo fix doesn't lose your place.
+  function placeAfterEdit(oldWords, oldPos) {
+    const n = Math.min(4, oldPos);
+    if (!n) return 0;
+    const phrase = oldWords.slice(oldPos - n, oldPos).map((w) => w.n);
+    for (let d = 0; d <= words.length; d++) {
+      for (const s of d ? [oldPos - n - d, oldPos - n + d] : [oldPos - n]) {
+        if (s >= 0 && s + n <= words.length && phrase.every((w, t) => words[s + t].n === w)) return s + n;
+      }
+    }
+    return Math.min(oldPos, words.length);
+  }
+
+  $('applyBtn').addEventListener('click', () => {
+    if (editorMode === 'new') {
+      if (!editor.value.trim()) return editor.focus();
+      editDlg.close('applied');
+      if (addAndOpen(editor.value) === 'existing') showBanner('That sermon was already in your list, so it\'s open now.', true);
+      return;
+    }
+    draft = null;
+    editDlg.close('applied');
+    if (editor.value === text) return;
+    if (!writeText(currentId, editor.value)) {
+      draft = editor.value;
+      showBanner(STORAGE_FULL);
+      return;
+    }
+    const oldWords = words;
+    const oldPos = pos;
+    text = editor.value;
+    pos = 0;
+    recent = [];
+    misses = 0;
+    setLost(false);
+    heardLog = [];
+    setHeardVisible(false);
+    render();
+    layout();
+    setPos(replacedWhole ? 0 : placeAfterEdit(oldWords, oldPos), true);
+    if (replacedWhole) resetClock();
+    else tickClock();
+    scrollToCurrent(true);
+  });
+  $('cancelBtn').addEventListener('click', () => {
+    draft = null;
+    editDlg.close('cancelled');
+  });
+  $('sampleBtn').addEventListener('click', () => {
+    editor.value = SAMPLE;
+    replacedWhole = true;
+  });
+  $('openFileBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      editor.value = await file.text();
+      replacedWhole = true;
+    }
+    e.target.value = '';
+  });
+
+  for (const btn of document.querySelectorAll('[data-close]')) {
+    btn.addEventListener('click', () => btn.closest('dialog').close());
+  }
+  // A click on the backdrop closes a dialog, but not the end of a text selection or
+  // resize drag that started inside it and was released outside.
+  for (const dlg of [editDlg, settingsDlg, libraryDlg, micDlg]) {
+    let downOnBackdrop = false;
+    dlg.addEventListener('pointerdown', (e) => { downOnBackdrop = e.target === dlg; });
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg && downOnBackdrop) dlg.close();
+      downOnBackdrop = false;
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+  textEl.addEventListener('click', (e) => {
+    const w = e.target.closest('.w');
+    if (w) setPos(firstWordFrom(Number(w.dataset.s)), true);
+  });
+
+  function stepWord(dir) {
+    if (dir > 0) {
+      setPos(firstWordFrom(shownSpan + 1), true);
+    } else {
+      for (let s = Math.min(shownSpan, spans.length) - 1; s >= 0; s--) {
+        if (spans[s].first >= 0) return setPos(spans[s].first, true);
+      }
+    }
+  }
+
+  function stepLine(dir) {
+    if (!spans.length) return;
+    const topOf = (s) => spans[s].el.getBoundingClientRect().top;
+    const cur = Math.min(shownSpan, spans.length - 1);
+    const top = topOf(cur);
+    if (dir > 0) {
+      for (let s = cur + 1; s < spans.length; s++) {
+        if (topOf(s) > top + 2) return setPos(firstWordFrom(s), true);
+      }
+      return setPos(words.length, true);
+    }
+    let s = cur - 1;
+    while (s >= 0 && topOf(s) >= top - 2) s--;
+    if (s < 0) return setPos(0, true);
+    const prevTop = topOf(s);
+    while (s > 0 && Math.abs(topOf(s - 1) - prevTop) < 2) s--;
+    setPos(firstWordFrom(s), true);
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  micBtn.addEventListener('click', toggleListening);
+  backBtn.addEventListener('click', () => {
+    backToPlace();
+    backBtn.blur();
+  });
+  function restart() {
+    setPos(0, true);
+    resetClock();
+  }
+  $('restartBtn').addEventListener('click', restart);
+  $('editBtn').addEventListener('click', () => openEditor('edit'));
+  $('libraryBtn').addEventListener('click', openLibrary);
+  $('settingsBtn').addEventListener('click', () => settingsDlg.showModal());
+  $('fullBtn').addEventListener('click', toggleFullscreen);
+  // Don't leave toolbar buttons focused, or Space would "click" them again.
+  for (const b of document.querySelectorAll('.toolbar button')) {
+    b.addEventListener('click', () => b.blur());
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' || e.key === 'Escape') peek();
+    if (e.key === 'Escape' && counting()) return cancelCountdown();
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (document.querySelector('dialog[open]') || !sectionsMenu.hidden) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    // Let Space/Enter press a button that was reached with Tab.
+    if ((e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('button, a')) return;
+    if (e.key === ' ' && e.repeat) return e.preventDefault();
+    const actions = {
+      ' ': toggleListening,
+      ArrowRight: () => stepWord(1),
+      ArrowLeft: () => stepWord(-1),
+      ArrowDown: () => stepLine(1),
+      ArrowUp: () => stepLine(-1),
+      // Presentation clickers send PageDown/PageUp, and "b" or "." for their blank-screen button.
+      PageDown: () => stepLine(1),
+      PageUp: () => stepLine(-1),
+      b: toggleListening,
+      '.': toggleListening,
+      Home: restart,
+      '[': () => stepSection(-1),
+      ']': () => stepSection(1),
+      c: toggleCamera,
+      '+': () => changeFontSize(4),
+      '=': () => changeFontSize(4),
+      '-': () => changeFontSize(-4),
+      f: toggleFullscreen,
+      e: () => openEditor('edit'),
+      o: openLibrary,
+      m: openMicCheck,
+      s: () => settingsDlg.showModal()
+    };
+    const action = actions[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+    if (action) {
+      e.preventDefault();
+      action();
+    }
+  });
+
+  let resizeFrame = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      layout();
+      scrollToCurrent(true);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Start up
+  // ---------------------------------------------------------------------------
+  render();
+  applySettings();
+  tickClock();
+  $('versionText').textContent = 'v' + APP_VERSION;
+
+  // When served from a web address (not opened as a local file), Chrome can install the page
+  // as an app with its own window and icon. The manifest is only linked there, because
+  // Chrome refuses to load it from file:// and would log an error.
+  if (location.protocol.startsWith('http')) {
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'manifest.webmanifest';
+    document.head.appendChild(link);
+  }
+  let installPrompt = null;
+  const installBtn = $('installBtn');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener('appinstalled', () => { installBtn.hidden = true; });
+
+  if (DEBUG) {
+    // Read-only handle for tools/tests (tests/replay-log.js) and the browser console.
+    window.speechScroll = {
+      version: APP_VERSION,
+      get pos() { return pos; },
+      get wordCount() { return words.length; },
+      jumpTo: (i) => setPos(i, true),
+      context: (i, before = 4, after = 4) => spans
+        .slice(Math.max(0, spanAt(Math.max(0, i - before))), spanAt(Math.min(words.length, i + after)))
+        .map((sp, k, all) => (all[k] === spans[spanAt(i)] ? '▶' : '') + sp.el.textContent).join(' ')
+    };
+    debugBtn.hidden = false;
+    debugBtn.addEventListener('click', downloadLog);
+    showBanner('Debug mode: read for a minute or two as normal, then press "Download session log" and share the file.', true);
+  }
+
+  if (!SR) {
+    micBtn.disabled = true;
+    setStatus('unsupported');
+    showBanner('Speech recognition isn\'t available in this browser. Open this page in Google Chrome. You can still move through the text with the arrow keys.');
+  }
+})();
+</script>
+</body>
+</html>
