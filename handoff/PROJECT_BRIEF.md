@@ -97,15 +97,22 @@ After `LOST_AFTER = 8` misses in a row, the "Lost you" state shows: amber dot an
 ## 6. Roadmap (details and prompts in CHAT_PLAN.md)
 
 **Done:** camera mode, the sermon text format, the section list, the time display and full-length debug logs (v1.1.0), plus the sermon library, the microphone check and the camera-mode countdown (v1.2.0).
+**Don't:** build a desktop app (Electron and similar can't use Chrome's speech service), rewrite the matcher without log evidence, or add anything that shows on screen while recording in camera mode.
+
+**Live:** v1.2.0 at <https://rafaellunajrb.github.io/speech-scroll/>, confirmed working by the owner in October 2026.
 
 1. **Real read-through with `?debug`** (Step R in CHAT_PLAN.md), then **tune from the real logs**,
    including protection against repeated lines.
-2. *Optional, if logs or use show the need:*
+2. **Library export and import (backup).** The library lives only in this browser, so a reset or a new laptop loses it. Do this next if no log is ready yet.
+3. **If the owner wants them:**
+   - **A summary after each reading:** duration, pace, where it lost you, and fast or slow sections.
+   - **A target length** with a quiet ahead/behind indicator.
+4. *Optional, if logs or use show the need:*
    - **Better matching for spoken numbers and Bible references.**
    - **An on-device recognition mode with vocabulary biasing.** Chrome's `processLocally` mode, plus `recognition.phrases` to bias it toward words from the script. Per research in October 2026, both are shipped in desktop Chrome, but biasing works only on-device. Check current Chrome docs before relying on this.
    - **A microphone level meter.**
    - **"Commit + replay" interim handling.** Restore the state saved at the last final result, then replay the current interim words on every event. That way, revised interim guesses can't leave stale jumps. It helped in simulation, but needs real logs to justify it.
-   - **Ideas for later:** a target-length warning, choosing the microphone inside the app (`recognition.start(track)`), export and import of the sermon library, and a mirror mode (only for teleprompter glass).
+   - **Ideas for later:** choosing the microphone inside the app (`recognition.start(track)`), export and import of the sermon library, and a mirror mode (only for teleprompter glass).
 
 ## 7. Working rules for the assistant
 
